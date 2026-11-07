@@ -1,0 +1,715 @@
+{
+ "depot": {
+  "name": "Fremont (start/end)",
+  "lat": 37.5485,
+  "lon": -121.9886
+ },
+ "sites": [
+  {
+   "name": "A Pet Villa Dog Boarding and Grooming",
+   "type": "dropoff",
+   "total_balls": 2000,
+   "visits": [
+    {
+     "date": "2025-09-21",
+     "balls": 2000,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3797891,
+   "lon": -121.9537331,
+   "confidence": "high",
+   "matched_as": "A Pet Villa, 1205, Laurelwood Road, Santa Clara, Santa Clara County, California, 95054, Un",
+   "num_visits": 1,
+   "last_visit": "2025-09-21"
+  },
+  {
+   "name": "Humane Society Silicon Valley",
+   "type": "dropoff",
+   "total_balls": 1700,
+   "visits": [
+    {
+     "date": "2026-02-07",
+     "balls": 700,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-03",
+     "balls": 1000,
+     "notes": ""
+    }
+   ],
+   "lat": 37.4217456,
+   "lon": -121.887582,
+   "confidence": "high",
+   "matched_as": "Humane Society Silicon Valley, 901, Ames Avenue, Milpitas, Santa Clara County, California,",
+   "num_visits": 2,
+   "last_visit": "2026-02-07"
+  },
+  {
+   "name": "San Jose Animal Shelter",
+   "type": "dropoff",
+   "total_balls": 1500,
+   "visits": [
+    {
+     "date": "2026-02-07",
+     "balls": 700,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-03",
+     "balls": 800,
+     "notes": ""
+    }
+   ],
+   "lat": 37.2943506,
+   "lon": -121.8504028,
+   "confidence": "high",
+   "matched_as": "City of San Jose Animal Care Services, 2750, Monterey Road, San Jose, Santa Clara County, ",
+   "num_visits": 2,
+   "last_visit": "2026-02-07"
+  },
+  {
+   "name": "Allie's Doggie Day Camp",
+   "type": "dropoff",
+   "total_balls": 1100,
+   "visits": [
+    {
+     "date": "2026-02-07",
+     "balls": 700,
+     "notes": ""
+    },
+    {
+     "date": "2025-09-21",
+     "balls": 400,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3557768,
+   "lon": -121.8791969,
+   "confidence": "high",
+   "matched_as": "562, North 20th Street, Luna Park, San Jose, Santa Clara County, California, 95112, United",
+   "num_visits": 2,
+   "last_visit": "2026-02-07"
+  },
+  {
+   "name": "Lucky Buddies Pet Sitting",
+   "type": "dropoff",
+   "total_balls": 900,
+   "visits": [
+    {
+     "date": "2025-09-21",
+     "balls": 900,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3488564,
+   "lon": -121.8828583,
+   "confidence": "low",
+   "matched_as": "San Jose Barbell, 404, North 13th Street, Luna Park, San Jose, Santa Clara County, Califor",
+   "num_visits": 1,
+   "last_visit": "2025-09-21"
+  },
+  {
+   "name": "Grimmer Elementary",
+   "type": "dropoff",
+   "total_balls": 830,
+   "visits": [
+    {
+     "date": "2026-03-13",
+     "balls": 830,
+     "notes": ""
+    }
+   ],
+   "lat": 37.5203459,
+   "lon": -121.9512289,
+   "confidence": "high",
+   "matched_as": "E M Grimmer Elementary School, Newport Drive, Irvington District, Fremont, Alameda County,",
+   "num_visits": 1,
+   "last_visit": "2026-03-13"
+  },
+  {
+   "name": "Mission Valley Elementary",
+   "type": "dropoff",
+   "total_balls": 750,
+   "visits": [
+    {
+     "date": "2026-03-13",
+     "balls": 750,
+     "notes": ""
+    }
+   ],
+   "lat": 37.536635,
+   "lon": -121.9461121,
+   "confidence": "high",
+   "matched_as": "Mission Valley Elementary School, 41700, Denise Street, Irvington District, Fremont, Alame",
+   "num_visits": 1,
+   "last_visit": "2026-03-13"
+  },
+  {
+   "name": "Love Second Chances",
+   "type": "dropoff",
+   "total_balls": 600,
+   "visits": [
+    {
+     "date": "2026-09-20",
+     "balls": 600,
+     "notes": "dropped off they said thanks"
+    }
+   ],
+   "lat": 37.7199026,
+   "lon": -121.9333401,
+   "confidence": "medium",
+   "matched_as": "7601, Kilrush Avenue, Village Parkway, Dublin, Alameda County, California, 94582, United S",
+   "num_visits": 1,
+   "last_visit": "2026-09-20"
+  },
+  {
+   "name": "Furrtropolis",
+   "type": "dropoff",
+   "total_balls": 600,
+   "visits": [
+    {
+     "date": "2026-01-03",
+     "balls": 600,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3102777,
+   "lon": -121.9311254,
+   "confidence": "high",
+   "matched_as": "902, South Bascom Avenue, Buena Vista, San Jose, Santa Clara County, California, 95128, Un",
+   "num_visits": 1,
+   "last_visit": "2026-01-03"
+  },
+  {
+   "name": "Gomes Elementary",
+   "type": "dropoff",
+   "total_balls": 600,
+   "visits": [
+    {
+     "date": "2025-11-06",
+     "balls": 600,
+     "notes": ""
+    }
+   ],
+   "lat": 37.5511652,
+   "lon": -121.9490477,
+   "confidence": "high",
+   "matched_as": "John M Gomes Elementary School, Rainwater Court, Fremont, Alameda County, California, 9453",
+   "num_visits": 1,
+   "last_visit": "2025-11-06"
+  },
+  {
+   "name": "Oliveira Elementary",
+   "type": "dropoff",
+   "total_balls": 552,
+   "visits": [
+    {
+     "date": "2026-03-13",
+     "balls": 440,
+     "notes": ""
+    },
+    {
+     "date": "2025-11-06",
+     "balls": 112,
+     "notes": "cut tennis balls for chairs"
+    }
+   ],
+   "lat": 37.5601997,
+   "lon": -122.0165904,
+   "confidence": "high",
+   "matched_as": "Oliveira Elementary School, 4180, Alder Avenue, Centerville District, Fremont, Alameda Cou",
+   "num_visits": 2,
+   "last_visit": "2026-03-13"
+  },
+  {
+   "name": "Silicon Valley Animal Control Authority",
+   "type": "dropoff",
+   "total_balls": 500,
+   "visits": [
+    {
+     "date": "2025-09-21",
+     "balls": 500,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3821264,
+   "lon": -121.9587696,
+   "confidence": "high",
+   "matched_as": "Silicon Valley Animal Control Authority, 3370, Thomas Road, Santa Clara, Santa Clara Count",
+   "num_visits": 1,
+   "last_visit": "2025-09-21"
+  },
+  {
+   "name": "Downtown Dogs",
+   "type": "dropoff",
+   "total_balls": 450,
+   "visits": [
+    {
+     "date": "2026-01-03",
+     "balls": 450,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3250851,
+   "lon": -121.8820856,
+   "confidence": "high",
+   "matched_as": "Downtown Dogs, 734, South 1st Street, SoFA, San Jose, Santa Clara County, California, 9511",
+   "num_visits": 1,
+   "last_visit": "2026-01-03"
+  },
+  {
+   "name": "Red Rover Pet Resort",
+   "type": "dropoff",
+   "total_balls": 400,
+   "visits": [
+    {
+     "date": "2026-02-07",
+     "balls": 400,
+     "notes": ""
+    }
+   ],
+   "lat": 37.4261436,
+   "lon": -121.8977063,
+   "confidence": "high",
+   "matched_as": "Red Rover Pet Resort, 334, Turquoise Street, Milpitas, Santa Clara County, California, 950",
+   "num_visits": 1,
+   "last_visit": "2026-02-07"
+  },
+  {
+   "name": "Girly's Pet Sitting",
+   "type": "dropoff",
+   "total_balls": 300,
+   "visits": [
+    {
+     "date": "2025-09-21",
+     "balls": 300,
+     "notes": ""
+    }
+   ],
+   "lat": 37.4688273,
+   "lon": -122.141075,
+   "confidence": "low",
+   "matched_as": "East Palo Alto, San Mateo County, California, United States",
+   "num_visits": 1,
+   "last_visit": "2025-09-21"
+  },
+  {
+   "name": "Walters Middle School",
+   "type": "dropoff",
+   "total_balls": 250,
+   "visits": [
+    {
+     "date": "2025-11-06",
+     "balls": 250,
+     "notes": "cut tennis balls for chairs"
+    }
+   ],
+   "lat": 37.5377055,
+   "lon": -121.9832362,
+   "confidence": "high",
+   "matched_as": "G M Walters Middle School, Costa Way, Irvington District, Fremont, Alameda County, Califor",
+   "num_visits": 1,
+   "last_visit": "2025-11-06"
+  },
+  {
+   "name": "Blacow Elementary",
+   "type": "dropoff",
+   "total_balls": 200,
+   "visits": [
+    {
+     "date": "2025-11-06",
+     "balls": 200,
+     "notes": "cut tennis balls for chairs"
+    }
+   ],
+   "lat": 37.5279868,
+   "lon": -121.9761484,
+   "confidence": "high",
+   "matched_as": "John Blacow Elementary School, Ives Court, Irvington District, Fremont, Alameda County, Ca",
+   "num_visits": 1,
+   "last_visit": "2025-11-06"
+  },
+  {
+   "name": "Mission San Jose Elementary",
+   "type": "dropoff",
+   "total_balls": 150,
+   "visits": [
+    {
+     "date": "2026-05-19",
+     "balls": 150,
+     "notes": ""
+    }
+   ],
+   "lat": 37.5281055,
+   "lon": -121.9222405,
+   "confidence": "high",
+   "matched_as": "Mission San Jose Elementary School, De Leon Avenue, Mission San Jose District, Fremont, Al",
+   "num_visits": 1,
+   "last_visit": "2026-05-19"
+  },
+  {
+   "name": "Irvington High School",
+   "type": "dropoff",
+   "total_balls": 144,
+   "visits": [
+    {
+     "date": "2025-11-06",
+     "balls": 144,
+     "notes": "cut tennis balls for chairs"
+    }
+   ],
+   "lat": 37.5248864,
+   "lon": -121.9668422,
+   "confidence": "high",
+   "matched_as": "Irvington High School, Ellen Street, Irvington District, Fremont, Alameda County, Californ",
+   "num_visits": 1,
+   "last_visit": "2025-11-06"
+  },
+  {
+   "name": "Bringhurst Elementary",
+   "type": "dropoff",
+   "total_balls": 120,
+   "visits": [
+    {
+     "date": "2025-11-06",
+     "balls": 120,
+     "notes": "cut tennis balls for chairs"
+    }
+   ],
+   "lat": 37.5011025,
+   "lon": -121.9456347,
+   "confidence": "high",
+   "matched_as": "Lila Bringhurst Elementary, Virtual Common, Warm Springs District, Fremont, Alameda County",
+   "num_visits": 1,
+   "last_visit": "2025-11-06"
+  },
+  {
+   "name": "Vallejo Mill Elementary",
+   "type": "dropoff",
+   "total_balls": 110,
+   "visits": [
+    {
+     "date": "2026-05-19",
+     "balls": 110,
+     "notes": ""
+    }
+   ],
+   "lat": 37.5748492,
+   "lon": -121.961042,
+   "confidence": "high",
+   "matched_as": "Vallejo Mill Elementary School, Chrisholm Place, Niles District, Fremont, Alameda County, ",
+   "num_visits": 1,
+   "last_visit": "2026-05-19"
+  },
+  {
+   "name": "Brier Elementary",
+   "type": "dropoff",
+   "total_balls": 100,
+   "visits": [
+    {
+     "date": "2026-03-13",
+     "balls": 100,
+     "notes": ""
+    }
+   ],
+   "lat": 37.540018,
+   "lon": -121.9867919,
+   "confidence": "high",
+   "matched_as": "Brier Elementary School, Dorrington Court, Centerville District, Fremont, Alameda County, ",
+   "num_visits": 1,
+   "last_visit": "2026-03-13"
+  },
+  {
+   "name": "Forest Park Elementary",
+   "type": "dropoff",
+   "total_balls": 40,
+   "visits": [
+    {
+     "date": "2025-11-06",
+     "balls": 40,
+     "notes": "cut tennis balls for chairs"
+    }
+   ],
+   "lat": 37.5621265,
+   "lon": -122.0523141,
+   "confidence": "high",
+   "matched_as": "Forest Park Elementary School, Shattuck Avenue, Fremont, Alameda County, California, 94555",
+   "num_visits": 1,
+   "last_visit": "2025-11-06"
+  },
+  {
+   "name": "Kim Grant Tennis",
+   "type": "pickup",
+   "total_balls": 8325,
+   "visits": [
+    {
+     "date": "2026-06-27",
+     "balls": 2000,
+     "notes": ""
+    },
+    {
+     "date": "2026-03-16",
+     "balls": 1200,
+     "notes": ""
+    },
+    {
+     "date": "2026-02-14",
+     "balls": 3000,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-02",
+     "balls": 625,
+     "notes": ""
+    },
+    {
+     "date": "2025-11-16",
+     "balls": 1500,
+     "notes": ""
+    }
+   ],
+   "lat": 37.4315511,
+   "lon": -122.1248766,
+   "confidence": "high",
+   "matched_as": "3005, Middlefield Road, Midtown, Palo Alto, Santa Clara County, California, 94303, United ",
+   "num_visits": 5,
+   "last_visit": "2026-06-27"
+  },
+  {
+   "name": "University Club Palo Alto",
+   "type": "pickup",
+   "total_balls": 3350,
+   "visits": [
+    {
+     "date": "2026-06-27",
+     "balls": 800,
+     "notes": ""
+    },
+    {
+     "date": "2026-03-16",
+     "balls": 500,
+     "notes": ""
+    },
+    {
+     "date": "2026-02-14",
+     "balls": 600,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-02",
+     "balls": 250,
+     "notes": ""
+    },
+    {
+     "date": "2025-08-29",
+     "balls": 1200,
+     "notes": ""
+    }
+   ],
+   "lat": 37.4060201,
+   "lon": -122.1485972,
+   "confidence": "high",
+   "matched_as": "3277, Miranda Avenue, Palo Alto, Santa Clara County, California, 94304, United States",
+   "num_visits": 5,
+   "last_visit": "2026-06-27"
+  },
+  {
+   "name": "Lifetime Activities Cupertino",
+   "type": "pickup",
+   "total_balls": 3150,
+   "visits": [
+    {
+     "date": "2026-06-27",
+     "balls": 1200,
+     "notes": ""
+    },
+    {
+     "date": "2026-03-16",
+     "balls": 800,
+     "notes": ""
+    },
+    {
+     "date": "2026-02-14",
+     "balls": 300,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-02",
+     "balls": 450,
+     "notes": ""
+    },
+    {
+     "date": "2025-11-16",
+     "balls": 400,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3236065,
+   "lon": -122.0429004,
+   "confidence": "high",
+   "matched_as": "Cupertino Sports Center, 21111, Stevens Creek Boulevard, Cupertino, Santa Clara County, Ca",
+   "num_visits": 5,
+   "last_visit": "2026-06-27"
+  },
+  {
+   "name": "Norcal Tennis Academy",
+   "type": "pickup",
+   "total_balls": 2700,
+   "visits": [
+    {
+     "date": "2026-03-16",
+     "balls": 1800,
+     "notes": ""
+    },
+    {
+     "date": "2025-08-29",
+     "balls": 900,
+     "notes": ""
+    }
+   ],
+   "lat": 37.516596,
+   "lon": -121.995458,
+   "confidence": "medium",
+   "matched_as": "6200, Buena Vista Drive, Newark, Alameda County, California, 94560, United States",
+   "num_visits": 2,
+   "last_visit": "2026-03-16"
+  },
+  {
+   "name": "Kona Kai Swim & Racquet Club",
+   "type": "pickup",
+   "total_balls": 2450,
+   "visits": [
+    {
+     "date": "2026-06-27",
+     "balls": 500,
+     "notes": ""
+    },
+    {
+     "date": "2026-03-16",
+     "balls": 200,
+     "notes": ""
+    },
+    {
+     "date": "2026-02-14",
+     "balls": 600,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-02",
+     "balls": 500,
+     "notes": ""
+    },
+    {
+     "date": "2025-11-16",
+     "balls": 400,
+     "notes": ""
+    },
+    {
+     "date": "2025-08-29",
+     "balls": 250,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3347716,
+   "lon": -122.0012618,
+   "confidence": "high",
+   "matched_as": "Kona Kai Swim & Racquet Club, 680, Hubbard Avenue, Santa Clara, Santa Clara County, Califo",
+   "num_visits": 6,
+   "last_visit": "2026-06-27"
+  },
+  {
+   "name": "Mountain View Tennis",
+   "type": "pickup",
+   "total_balls": 1450,
+   "visits": [
+    {
+     "date": "2026-01-02",
+     "balls": 1250,
+     "notes": ""
+    },
+    {
+     "date": "2025-08-29",
+     "balls": 200,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3734432,
+   "lon": -122.0820494,
+   "confidence": "high",
+   "matched_as": "685, Cuesta Drive, Mountain View, Santa Clara County, California, 94040, United States",
+   "num_visits": 2,
+   "last_visit": "2026-01-02"
+  },
+  {
+   "name": "Cupertino Hills Swim & Racquet Club",
+   "type": "pickup",
+   "total_balls": 1400,
+   "visits": [
+    {
+     "date": "2026-06-27",
+     "balls": 600,
+     "notes": ""
+    },
+    {
+     "date": "2025-08-29",
+     "balls": 800,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3112656,
+   "lon": -122.0608196,
+   "confidence": "high",
+   "matched_as": "Cupertino Hills Swim and Racquet club, 22090, Rae Lane, Cupertino, Santa Clara County, Cal",
+   "num_visits": 2,
+   "last_visit": "2026-06-27"
+  },
+  {
+   "name": "Mission Hills Swim & Racquet Club",
+   "type": "pickup",
+   "total_balls": 1300,
+   "visits": [
+    {
+     "date": "2026-01-02",
+     "balls": 600,
+     "notes": ""
+    },
+    {
+     "date": "2025-08-29",
+     "balls": 700,
+     "notes": ""
+    }
+   ],
+   "lat": 37.5589665,
+   "lon": -121.9508535,
+   "confidence": "high",
+   "matched_as": "10;100, East Las Palmas Avenue, Fremont, Alameda County, California, 94537, United States",
+   "num_visits": 2,
+   "last_visit": "2026-01-02"
+  },
+  {
+   "name": "Lifetime Activities Sunnyvale",
+   "type": "pickup",
+   "total_balls": 650,
+   "visits": [
+    {
+     "date": "2026-03-16",
+     "balls": 400,
+     "notes": ""
+    },
+    {
+     "date": "2025-11-16",
+     "balls": 250,
+     "notes": ""
+    }
+   ],
+   "lat": 37.3657944,
+   "lon": -122.0379537,
+   "confidence": "high",
+   "matched_as": "Sunnyvale Municipal Tennis Center, 755, South Mathilda Avenue, Sunnyvale, Santa Clara Coun",
+   "num_visits": 2,
+   "last_visit": "2026-03-16"
+  }
+ ]
+}

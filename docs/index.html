@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bin to Better – Tennis Ball Map</title>
+
+  <!-- Leaflet = the free map library. Pinned to version 1.9.4 so it never changes under us. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* Colors live here so you can change the whole look in one place. */
+    :root {
+      --ink: #1f2d2a;
+      --muted: #6b7a76;
+      --paper: #fbfcf6;
+      --ball: #b7d92b;       /* tennis-ball green: pickups */
+      --ball-dark: #6f8a0c;
+      --drop: #ff7a59;       /* coral: dropoffs */
+      --drop-dark: #c2431f;
+      --shadow: 0 6px 24px rgba(31, 45, 42, .18);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { font-family: "Poppins", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+
+    #map { position: absolute; inset: 0; }
+    /* Soften the standard OpenStreetMap colors so our markers stand out. */
+    .leaflet-tile-pane { filter: saturate(.55) brightness(1.04) contrast(.95); }
+
+    /* ---------- floating side panel ---------- */
+    .panel {
+      position: absolute; z-index: 1000; top: 16px; left: 16px; width: 320px;
+      max-height: calc(100% - 32px); overflow-y: auto;
+      background: rgba(251, 252, 246, .94); backdrop-filter: blur(8px);
+      border-radius: 20px; box-shadow: var(--shadow); padding: 20px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 44px; height: 44px; border-radius: 50%; flex: none;
+      background: radial-gradient(circle at 35% 30%, #dff56a, var(--ball) 55%, var(--ball-dark));
+      position: relative; overflow: hidden; box-shadow: inset -3px -4px 8px rgba(0,0,0,.15);
+    }
+    .logo::before { /* one curved seam, like a tennis ball */
+      content: ""; position: absolute; inset: 6px -14px; border: 2px solid rgba(255,255,255,.85); border-radius: 50%;
+      clip-path: inset(0 50% 0 0); left: -2px; right: auto; width: 100%;
+    }
+    h1 { font-size: 1.15rem; line-height: 1.2; margin: 0; font-weight: 700; }
+    .tag { font-size: .78rem; color: var(--muted); margin: 2px 0 0; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 14px; }
+    .stat { background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .stat b { display: block; font-size: 1.45rem; line-height: 1.1; }
+    .stat span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .stat.pick b { color: var(--ball-dark); }
+    .stat.drop b { color: var(--drop-dark); }
+
+    .toggles { display: flex; flex-direction: column; gap: 8px; }
+    .toggle {
+      display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+      background: #fff; border-radius: 12px; padding: 10px 12px; font-size: .88rem; font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    .toggle input { accent-color: var(--ink); width: 16px; height: 16px; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid; flex: none; }
+    .dot.pick { background: var(--ball); border-color: var(--ball-dark); }
+    .dot.drop { background: var(--drop); border-color: var(--drop-dark); }
+
+    .size-legend { margin-top: 16px; font-size: .75rem; color: var(--muted); }
+    .size-legend .row { display: flex; align-items: flex-end; gap: 14px; margin-top: 8px; }
+    .size-legend .item { text-align: center; }
+    .size-legend .circle { border-radius: 50%; border: 2px solid #8a9794; background: rgba(138,151,148,.2); margin: 0 auto 4px; }
+    .note { margin-top: 14px; font-size: .72rem; color: var(--muted); line-height: 1.5; }
+    .note .dashed { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #555; vertical-align: -2px; }
+
+    /* ---------- popups ---------- */
+    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow); font-family: "Poppins", sans-serif; }
+    .leaflet-popup-content { margin: 14px 16px; min-width: 210px; }
+    .pop h3 { margin: 0 0 2px; font-size: 1rem; }
+    .pop .kind { display: inline-block; font-size: .68rem; font-weight: 600; padding: 2px 9px; border-radius: 99px; color: #fff; margin-bottom: 8px; }
+    .pop .kind.pickup { background: var(--ball-dark); }
+    .pop .kind.dropoff { background: var(--drop-dark); }
+    .pop .big { font-size: 1.5rem; font-weight: 700; line-height: 1; }
+    .pop .sub { color: var(--muted); font-size: .78rem; margin: 2px 0 8px; }
+    .pop table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .pop td { padding: 3px 0; border-top: 1px solid #eef0e6; }
+    .pop td:last-child { text-align: right; font-weight: 600; }
+    .pop .warn { margin-top: 8px; font-size: .72rem; color: #8a5a00; background: #fff4d6; border-radius: 8px; padding: 6px 8px; }
+
+    .depot-icon {
+      background: var(--ink); color: #fff; width: 30px; height: 30px; border-radius: 8px; font-size: 16px;
+      display: grid; place-items: center; border: 2px solid #fff; box-shadow: var(--shadow);
+    }
+
+    /* On phones the panel becomes a compact card at the bottom. */
+    @media (max-width: 640px) {
+      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 45%; padding: 14px; }
+      .stats { margin: 12px 0 10px; }
+      .size-legend { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <aside class="panel">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Bin to Better</h1>
+        <p class="tag">Tennis ball recycling map</p>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat pick"><b id="stat-pick">–</b><span>balls collected</span></div>
+      <div class="stat drop"><b id="stat-drop">–</b><span>balls dropped off</span></div>
+    </div>
+
+    <div class="toggles">
+      <label class="toggle"><input type="checkbox" id="toggle-pickup" checked><span class="dot pick"></span><span>Collection sites (<span id="n-pick">0</span>)</span></label>
+      <label class="toggle"><input type="checkbox" id="toggle-dropoff" checked><span class="dot drop"></span><span>Dropoff sites (<span id="n-drop">0</span>)</span></label>
+    </div>
+
+    <div class="size-legend">
+      Circle size = total balls
+      <div class="row" id="size-legend-row"></div>
+    </div>
+    <p class="note"><span class="dashed"></span> dashed outline = approximate location.<br>Click any circle for its visit history.</p>
+  </aside>
+
+  <script>
+    // ---------- 1. Make the map ----------
+    const map = L.map("map", { zoomControl: false }).setView([37.45, -122.0], 10);
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // ---------- 2. Helpers ----------
+    const COLORS = {
+      pickup:  { fill: "#b7d92b", line: "#6f8a0c" },
+      dropoff: { fill: "#ff7a59", line: "#c2431f" }
+    };
+    // Radius grows with the SQUARE ROOT of the ball count, so circle AREA matches the count.
+    // (If we used the count directly, a 3,000-ball site would look 75x bigger than a 40-ball one.)
+    const radius = balls => 4 + Math.sqrt(balls) * 0.4;
+    const fmt = n => n.toLocaleString("en-US");
+    const nice = iso => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    function popupHtml(s) {
+      const rows = s.visits.map(v => `<tr><td>${nice(v.date)}</td><td>${fmt(v.balls)}</td></tr>`).join("");
+      const warn = s.confidence === "low" ? `<div class="warn">Approximate location only.</div>` : "";
+      return `<div class="pop">
+        <h3>${esc(s.name)}</h3>
+        <span class="kind ${s.type}">${s.type === "pickup" ? "Collection site" : "Dropoff site"}</span>
+        <div class="big">${fmt(s.total_balls)} balls</div>
+        <div class="sub">${s.num_visits} visit${s.num_visits > 1 ? "s" : ""} · last on ${nice(s.last_visit)}</div>
+        <table>${rows}</table>${warn}</div>`;
+    }
+
+    // ---------- 3. Load the data and draw it ----------
+    const layers = { pickup: L.layerGroup().addTo(map), dropoff: L.layerGroup().addTo(map) };
+
+    fetch("data/sites.json")
+      .then(r => r.json())
+      .then(data => {
+        const totals = { pickup: 0, dropoff: 0 }, counts = { pickup: 0, dropoff: 0 };
+        const bounds = [];
+
+        // Draw big circles first so small ones end up on top and stay clickable.
+        [...data.sites].sort((a, b) => b.total_balls - a.total_balls).forEach(s => {
+          const c = COLORS[s.type];
+          L.circleMarker([s.lat, s.lon], {
+            radius: radius(s.total_balls),
+            color: c.line, weight: 2, fillColor: c.fill, fillOpacity: .6,
+            dashArray: s.confidence === "low" ? "4 4" : null
+          })
+            .bindPopup(popupHtml(s))
+            .bindTooltip(esc(s.name), { direction: "top", offset: [0, -radius(s.total_balls)] })
+            .addTo(layers[s.type]);
+          totals[s.type] += s.total_balls; counts[s.type]++;
+          bounds.push([s.lat, s.lon]);
+        });
+
+        // Fremont: where every trip starts and ends.
+        L.marker([data.depot.lat, data.depot.lon], {
+          icon: L.divIcon({ className: "", html: '<div class="depot-icon">🏠</div>', iconSize: [30, 30], iconAnchor: [15, 15] }),
+          zIndexOffset: 1000
+        }).bindTooltip(data.depot.name).addTo(map);
+        bounds.push([data.depot.lat, data.depot.lon]);
+
+        document.getElementById("stat-pick").textContent = fmt(totals.pickup);
+        document.getElementById("stat-drop").textContent = fmt(totals.dropoff);
+        document.getElementById("n-pick").textContent = counts.pickup;
+        document.getElementById("n-drop").textContent = counts.dropoff;
+        map.fitBounds(bounds, { padding: [60, 60] });
+
+        // Size legend (example circles)
+        document.getElementById("size-legend-row").innerHTML = [100, 1000, 3000].map(n => {
+          const d = radius(n) * 2;
+          return `<div class="item"><div class="circle" style="width:${d}px;height:${d}px"></div>${fmt(n)}</div>`;
+        }).join("");
+      })
+      .catch(() => alert("Could not load data/sites.json. If you opened index.html by double-clicking, run a local server instead (see NOTES)."));
+
+    // ---------- 4. Checkboxes show/hide the two kinds of sites ----------
+    ["pickup", "dropoff"].forEach(type => {
+      document.getElementById("toggle-" + type).addEventListener("change", e => {
+        e.target.checked ? map.addLayer(layers[type]) : map.removeLayer(layers[type]);
+      });
+    });
+  </script>
+</body>
+</html>
