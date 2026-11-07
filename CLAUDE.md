@@ -49,7 +49,8 @@ Preview locally with `python -m http.server` from inside `docs/` (opening index.
 ## Status
 - [x] Data cleaned and geocoded (`scripts/clean_data.py`)
 - [x] Map page (`docs/index.html`)
-- [ ] Route optimizer (`scripts/`): remind the user this is next
+- [x] Route optimizer (`scripts/optimize_route.py`) -> `docs/data/routes.json`, shown on the map
+- [ ] Not yet published: commit and push the optimizer + map update (only when the user asks)
 
 ## Map requirements
 - Leaflet with OpenStreetMap tiles (include the required attribution).

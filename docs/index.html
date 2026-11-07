@@ -76,6 +76,19 @@
     .note { margin-top: 14px; font-size: .72rem; color: var(--muted); line-height: 1.5; }
     .note .dashed { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #555; vertical-align: -2px; }
 
+    .routes { margin-top: 16px; }
+    .routes h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+    .route-opt { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 9px 12px;
+      margin-bottom: 8px; cursor: pointer; font-size: .82rem; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .route-opt input { accent-color: var(--ink); }
+    .route-opt .line { width: 22px; height: 0; border-top: 4px solid; flex: none; }
+    .route-opt .line.usual { border-color: #5b6b9a; border-top-style: dashed; }
+    .route-opt .line.best { border-color: #e0a100; }
+    .route-opt small { display: block; color: var(--muted); font-size: .7rem; }
+    .saving { background: #fff4d6; border-radius: 12px; padding: 10px 12px; font-size: .8rem; line-height: 1.45; }
+    .stop-num { background: var(--ink); color: #fff; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700;
+      display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+
     /* ---------- popups ---------- */
     .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow); font-family: "Poppins", sans-serif; }
     .leaflet-popup-content { margin: 14px 16px; min-width: 210px; }
@@ -125,6 +138,16 @@
       <label class="toggle"><input type="checkbox" id="toggle-dropoff" checked><span class="dot drop"></span><span>Dropoff sites (<span id="n-drop">0</span>)</span></label>
     </div>
 
+    <div class="routes" id="routes" hidden>
+      <h2>Pickup route</h2>
+      <label class="route-opt"><input type="radio" name="route" value="none" checked><span>Hide route</span></label>
+      <label class="route-opt"><input type="radio" name="route" value="usual"><span class="line usual"></span>
+        <span>Usual (nearest-first)<small id="usual-sub"></small></span></label>
+      <label class="route-opt"><input type="radio" name="route" value="best"><span class="line best"></span>
+        <span>Best (OR-Tools)<small id="best-sub"></small></span></label>
+      <div class="saving" id="saving"></div>
+    </div>
+
     <div class="size-legend">
       Circle size = total balls
       <div class="row" id="size-legend-row"></div>
@@ -165,6 +188,7 @@
     }
 
     // ---------- 3. Load the data and draw it ----------
+    const sitePos = {};  // site name -> [lat, lon], used to number the route stops
     const layers = { pickup: L.layerGroup().addTo(map), dropoff: L.layerGroup().addTo(map) };
 
     fetch("data/sites.json")
@@ -186,6 +210,7 @@
             .addTo(layers[s.type]);
           totals[s.type] += s.total_balls; counts[s.type]++;
           bounds.push([s.lat, s.lon]);
+          sitePos[s.name] = [s.lat, s.lon];
         });
 
         // Fremont: where every trip starts and ends.
@@ -208,6 +233,37 @@
         }).join("");
       })
       .catch(() => alert("Could not load data/sites.json. If you opened index.html by double-clicking, run a local server instead (see NOTES)."));
+
+    // ---------- 3b. Route comparison (made by scripts/optimize_route.py) ----------
+    const routeLayer = L.layerGroup().addTo(map);
+    const STYLE = { usual: { color: "#5b6b9a", dashArray: "8 8" }, best: { color: "#e0a100", dashArray: null } };
+    let routes = null, siteLatLon = {};
+
+    fetch("data/routes.json").then(r => r.json()).then(r => {
+      routes = r;
+      const hm = m => Math.floor(m / 60) ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${Math.round(m)} min`;
+      document.getElementById("usual-sub").textContent = `${hm(r.usual.total_minutes)} · ${r.usual.total_miles} mi`;
+      document.getElementById("best-sub").textContent = `${hm(r.best.total_minutes)} · ${r.best.total_miles} mi`;
+      document.getElementById("saving").innerHTML =
+        `The best order saves about <b>${Math.round(r.saved_minutes)} min</b> and <b>${r.saved_miles} miles</b> per trip (${r.saved_percent}% less driving).`;
+      document.getElementById("routes").hidden = false;
+    }).catch(() => {});
+
+    function showRoute(which) {
+      routeLayer.clearLayers();
+      if (which === "none" || !routes) return;
+      const r = routes[which], st = STYLE[which];
+      const line = L.polyline(r.path.map(([lon, lat]) => [lat, lon]), { ...st, weight: 5, opacity: .9 }).addTo(routeLayer);
+      // numbered stop badges, using the site positions already on the map
+      r.order.slice(1, -1).forEach((name, i) => {
+        const p = sitePos[name];
+        if (p) L.marker(p, { interactive: false, zIndexOffset: 900,
+          icon: L.divIcon({ className: "", html: `<div class="stop-num">${i + 1}</div>`, iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(routeLayer);
+      });
+      map.fitBounds(line.getBounds(), { padding: [60, 60] });
+    }
+    document.querySelectorAll('input[name="route"]').forEach(el =>
+      el.addEventListener("change", e => showRoute(e.target.value)));
 
     // ---------- 4. Checkboxes show/hide the two kinds of sites ----------
     ["pickup", "dropoff"].forEach(type => {
