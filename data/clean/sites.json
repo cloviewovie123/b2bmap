@@ -6,6 +6,34 @@
  },
  "sites": [
   {
+   "name": "Humane Society Silicon Valley",
+   "type": "dropoff",
+   "total_balls": 11700,
+   "visits": [
+    {
+     "date": "2026-09-20",
+     "balls": 10000,
+     "notes": ""
+    },
+    {
+     "date": "2026-02-07",
+     "balls": 700,
+     "notes": ""
+    },
+    {
+     "date": "2026-01-03",
+     "balls": 1000,
+     "notes": ""
+    }
+   ],
+   "lat": 37.4217456,
+   "lon": -121.887582,
+   "confidence": "high",
+   "matched_as": "Humane Society Silicon Valley, 901, Ames Avenue, Milpitas, Santa Clara County, California,",
+   "num_visits": 3,
+   "last_visit": "2026-09-20"
+  },
+  {
    "name": "A Pet Villa Dog Boarding and Grooming",
    "type": "dropoff",
    "total_balls": 2000,
@@ -22,29 +50,6 @@
    "matched_as": "A Pet Villa, 1205, Laurelwood Road, Santa Clara, Santa Clara County, California, 95054, Un",
    "num_visits": 1,
    "last_visit": "2025-09-21"
-  },
-  {
-   "name": "Humane Society Silicon Valley",
-   "type": "dropoff",
-   "total_balls": 1700,
-   "visits": [
-    {
-     "date": "2026-02-07",
-     "balls": 700,
-     "notes": ""
-    },
-    {
-     "date": "2026-01-03",
-     "balls": 1000,
-     "notes": ""
-    }
-   ],
-   "lat": 37.4217456,
-   "lon": -121.887582,
-   "confidence": "high",
-   "matched_as": "Humane Society Silicon Valley, 901, Ames Avenue, Milpitas, Santa Clara County, California,",
-   "num_visits": 2,
-   "last_visit": "2026-02-07"
   },
   {
    "name": "San Jose Animal Shelter",
