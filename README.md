@@ -19,7 +19,7 @@
 
 ## About
 
-[Bin to Better](https://bintobetter.org) collects used tennis balls from tennis clubs and gives them a second life as dog toys at shelters, rescues, and doggy daycares, instead of sending them to a landfill.
+[Bin to Better](https://bintobetter.org) collects used tennis balls from tennis clubs and gives them a second life as dog toys, chair glides in classrooms, or filament instead of sending them to a landfill.
 
 This project puts that whole network on one map and answers a practical question: **what's the shortest way to drive the pickup run?**
 
