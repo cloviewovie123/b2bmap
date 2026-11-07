@@ -4,272 +4,655 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Bin to Better – Tennis Ball Map</title>
+  <meta name="description" content="Where Bin to Better collects and drops off used tennis balls for recycling.">
 
-  <!-- Leaflet = the free map library. Pinned to version 1.9.4 so it never changes under us. -->
+  <!-- Pick the saved (or system) theme BEFORE the page paints, so there is no light/dark flash. -->
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("btb-theme"); } catch (e) {}
+      if (!t) t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
+
+  <!-- Leaflet = the free map library, pinned to an exact version so it never changes under us. -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    /* Colors live here so you can change the whole look in one place. */
+    /* ============ THEME COLORS — change the whole look from here ============ */
     :root {
-      --ink: #1f2d2a;
-      --muted: #6b7a76;
-      --paper: #fbfcf6;
-      --ball: #b7d92b;       /* tennis-ball green: pickups */
+      --bg: #f4f6ee;
+      --card: rgba(255, 255, 255, .86);
+      --panel: rgba(255, 255, 255, .96);
+      --solid: #ffffff;
+      --soft: #eef1e4;           /* quiet fill for chips and inactive buttons */
+      --ink: #1b2a26;
+      --muted: #66756f;
+      --line: #e1e6d6;
+      --accent: #84a309;         /* tennis-ball green, used for UI highlights */
+      --accent-ink: #ffffff;
+      --ball: #b7d92b;           /* collection (pickup) marker */
       --ball-dark: #6f8a0c;
-      --drop: #ff7a59;       /* coral: dropoffs */
+      --drop: #ff7a59;           /* dropoff marker */
       --drop-dark: #c2431f;
-      --shadow: 0 6px 24px rgba(31, 45, 42, .18);
+      --shadow: 0 8px 30px rgba(27, 42, 38, .16);
+      --ring: rgba(132, 163, 9, .35);
     }
+    :root[data-theme="dark"] {
+      --bg: #0e1513;
+      --card: rgba(20, 29, 26, .86);
+      --panel: rgba(20, 29, 26, .96);
+      --solid: #18231f;
+      --soft: #223029;
+      --ink: #e9f0ea;
+      --muted: #94a69f;
+      --line: #2a3a34;
+      --accent: #c6e23a;
+      --accent-ink: #14200a;
+      --ball: #c6e23a;
+      --ball-dark: #dff56a;
+      --drop: #ff8a6b;
+      --drop-dark: #ffb199;
+      --shadow: 0 8px 30px rgba(0, 0, 0, .5);
+      --ring: rgba(198, 226, 58, .35);
+    }
+
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     html, body { height: 100%; margin: 0; }
-    body { font-family: "Poppins", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+    body { font-family: "Poppins", system-ui, sans-serif; color: var(--ink); background: var(--bg); overflow: hidden; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    svg { display: block; }
+    .ico { width: 20px; height: 20px; display: inline-grid; place-items: center; flex: none; }
+    .ico svg { width: 100%; height: 100%; }
 
-    #map { position: absolute; inset: 0; }
-    /* Soften the standard OpenStreetMap colors so our markers stand out. */
-    .leaflet-tile-pane { filter: saturate(.55) brightness(1.04) contrast(.95); }
+    #map { position: absolute; inset: 0; background: var(--bg); }
 
-    /* ---------- floating side panel ---------- */
-    .panel {
-      position: absolute; z-index: 1000; top: 16px; left: 16px; width: 320px;
-      max-height: calc(100% - 32px); overflow-y: auto;
-      background: rgba(251, 252, 246, .94); backdrop-filter: blur(8px);
-      border-radius: 20px; box-shadow: var(--shadow); padding: 20px;
+    /* Street map tiles: soften in light mode, invert into a dark map in dark mode. */
+    .base-street { filter: saturate(.6) brightness(1.04) contrast(.95); transition: filter .4s; }
+    :root[data-theme="dark"] .base-street { filter: invert(1) hue-rotate(180deg) saturate(.55) brightness(.92) contrast(.92); }
+    :root[data-theme="dark"] .base-topo { filter: brightness(.78) saturate(.8); }
+    :root[data-theme="dark"] .base-sat  { filter: brightness(.85); }
+
+    /* ============ top bar ============ */
+    .topbar {
+      position: absolute; z-index: 1100; top: 14px; left: 14px; right: 14px;
+      display: flex; align-items: center; gap: 10px; pointer-events: none;
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .logo {
-      width: 44px; height: 44px; border-radius: 50%; flex: none;
-      background: radial-gradient(circle at 35% 30%, #dff56a, var(--ball) 55%, var(--ball-dark));
-      position: relative; overflow: hidden; box-shadow: inset -3px -4px 8px rgba(0,0,0,.15);
+    .topbar > * { pointer-events: auto; }
+    .glass { background: var(--card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+             box-shadow: var(--shadow); border: 1px solid var(--line); }
+    .iconbtn { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; transition: transform .15s, background .2s; }
+    .iconbtn:hover { transform: translateY(-1px); }
+    .iconbtn:focus-visible, .chip:focus-visible, .tab:focus-visible, .row:focus-visible { outline: 3px solid var(--ring); outline-offset: 1px; }
+
+    .brand { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px 0 8px; border-radius: 14px; }
+    .logo { width: 32px; height: 32px; border-radius: 50%; position: relative; overflow: hidden; flex: none;
+            background: radial-gradient(circle at 35% 30%, #e6f98a, #b7d92b 55%, #7d9a10); box-shadow: inset -2px -3px 6px rgba(0,0,0,.18); }
+    .logo::before, .logo::after { content: ""; position: absolute; width: 90%; height: 90%; border: 2px solid rgba(255,255,255,.9); border-radius: 50%; top: 5%; }
+    .logo::before { left: -62%; }
+    .logo::after  { right: -62%; }
+    .brand b { font-size: .98rem; font-weight: 700; line-height: 1.1; display: block; }
+    .brand small { font-size: .68rem; color: var(--muted); display: block; }
+
+    .search { position: relative; flex: 0 1 380px; }
+    .search .box { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 14px; border-radius: 14px; color: var(--muted); }
+    .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: .88rem; }
+    .search input::placeholder { color: var(--muted); }
+    .search kbd { font: inherit; font-size: .68rem; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+    .results { position: absolute; top: 54px; left: 0; right: 0; border-radius: 14px; padding: 6px; max-height: 50vh; overflow: auto; }
+    .result { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: transparent; text-align: left;
+              padding: 9px 10px; border-radius: 10px; font-size: .85rem; }
+    .result:hover, .result.sel { background: var(--soft); }
+    .result small { margin-left: auto; color: var(--muted); font-size: .72rem; white-space: nowrap; }
+    .none { padding: 10px; color: var(--muted); font-size: .82rem; }
+    .spacer { flex: 1; }
+
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid; flex: none; }
+    .dot.pickup { background: var(--ball); border-color: var(--ball-dark); }
+    .dot.dropoff { background: var(--drop); border-color: var(--drop-dark); }
+
+    /* ============ slide-out menu ============ */
+    .drawer {
+      position: absolute; z-index: 1050; top: 72px; left: 14px; bottom: 14px; width: min(390px, calc(100vw - 28px));
+      border-radius: 22px; display: flex; flex-direction: column; overflow: hidden;
+      transform: translateX(calc(-100% - 30px)); opacity: 0; visibility: hidden;
+      transition: transform .35s cubic-bezier(.2, .8, .2, 1), opacity .25s, visibility .35s;
     }
-    .logo::before { /* one curved seam, like a tennis ball */
-      content: ""; position: absolute; inset: 6px -14px; border: 2px solid rgba(255,255,255,.85); border-radius: 50%;
-      clip-path: inset(0 50% 0 0); left: -2px; right: auto; width: 100%;
-    }
-    h1 { font-size: 1.15rem; line-height: 1.2; margin: 0; font-weight: 700; }
-    .tag { font-size: .78rem; color: var(--muted); margin: 2px 0 0; }
+    .drawer.glass { background: var(--panel); }
+    .drawer.open { transform: none; opacity: 1; visibility: visible; }
+    .tabs { display: flex; gap: 4px; padding: 10px; border-bottom: 1px solid var(--line); }
+    .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border: 0; border-radius: 12px;
+           background: transparent; color: var(--muted); font-size: .7rem; font-weight: 500; transition: background .2s, color .2s; }
+    .tab:hover { background: var(--soft); }
+    .tab.active { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+    .panels { flex: 1; overflow-y: auto; padding: 16px; }
+    .panel { display: none; animation: fade .25s; }
+    .panel.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .panel h2 { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+    .panel h2:first-child { margin-top: 0; }
+    .panel p { font-size: .84rem; line-height: 1.6; color: var(--muted); margin: 0 0 10px; }
+    .panel p b { color: var(--ink); }
+    .panel a { color: var(--accent); font-weight: 600; }
 
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 14px; }
-    .stat { background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-    .stat b { display: block; font-size: 1.45rem; line-height: 1.1; }
-    .stat span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    .stat.pick b { color: var(--ball-dark); }
-    .stat.drop b { color: var(--drop-dark); }
+    .row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; margin-bottom: 8px; border: 1px solid var(--line);
+           border-radius: 14px; background: var(--solid); font-size: .86rem; font-weight: 500; text-align: left; }
+    button.row:hover { border-color: var(--accent); }
+    .row .grow { flex: 1; min-width: 0; }
+    .row small { display: block; color: var(--muted); font-size: .72rem; font-weight: 400; }
 
-    .toggles { display: flex; flex-direction: column; gap: 8px; }
-    .toggle {
-      display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
-      background: #fff; border-radius: 12px; padding: 10px 12px; font-size: .88rem; font-weight: 600;
-      box-shadow: 0 1px 4px rgba(0,0,0,.06);
-    }
-    .toggle input { accent-color: var(--ink); width: 16px; height: 16px; }
-    .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid; flex: none; }
-    .dot.pick { background: var(--ball); border-color: var(--ball-dark); }
-    .dot.drop { background: var(--drop); border-color: var(--drop-dark); }
+    /* on/off switch */
+    .switch { appearance: none; -webkit-appearance: none; width: 40px; height: 24px; border-radius: 99px; background: var(--line); position: relative;
+              cursor: pointer; transition: background .2s; flex: none; margin: 0; }
+    .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff;
+                     box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+    .switch:checked { background: var(--accent); }
+    .switch:checked::after { transform: translateX(16px); }
+    .switch:focus-visible { outline: 3px solid var(--ring); }
 
-    .size-legend { margin-top: 16px; font-size: .75rem; color: var(--muted); }
-    .size-legend .row { display: flex; align-items: flex-end; gap: 14px; margin-top: 8px; }
-    .size-legend .item { text-align: center; }
-    .size-legend .circle { border-radius: 50%; border: 2px solid #8a9794; background: rgba(138,151,148,.2); margin: 0 auto 4px; }
-    .note { margin-top: 14px; font-size: .72rem; color: var(--muted); line-height: 1.5; }
-    .note .dashed { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px dashed #555; vertical-align: -2px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--solid); font-size: .8rem; font-weight: 500; transition: all .2s; }
+    .chip:hover { border-color: var(--accent); }
+    .chip.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
-    .routes { margin-top: 16px; }
-    .routes h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
-    .route-opt { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 12px; padding: 9px 12px;
-      margin-bottom: 8px; cursor: pointer; font-size: .82rem; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
-    .route-opt input { accent-color: var(--ink); }
-    .route-opt .line { width: 22px; height: 0; border-top: 4px solid; flex: none; }
-    .route-opt .line.usual { border-color: #5b6b9a; border-top-style: dashed; }
-    .route-opt .line.best { border-color: #e0a100; }
-    .route-opt small { display: block; color: var(--muted); font-size: .7rem; }
-    .saving { background: #fff4d6; border-radius: 12px; padding: 10px 12px; font-size: .8rem; line-height: 1.45; }
-    .stop-num { background: var(--ink); color: #fff; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; font-weight: 700;
-      display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+    .bases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .base { border: 2px solid var(--line); border-radius: 14px; background: var(--solid); padding: 6px 6px 8px; font-size: .74rem; font-weight: 500; text-align: center; }
+    .base .thumb { height: 44px; border-radius: 9px; margin-bottom: 6px; }
+    .base[data-base="street"] .thumb { background: linear-gradient(135deg, #e8eadc 0 40%, #f7e9b4 40% 46%, #e8eadc 46% 70%, #bcd9ec 70%); }
+    .base[data-base="topo"] .thumb { background: repeating-radial-gradient(circle at 30% 60%, #d9e3c2 0 6px, #c4d2a4 6px 8px); }
+    .base[data-base="sat"] .thumb { background: linear-gradient(135deg, #3e5b34, #6a7f4f 45%, #2f4a62); }
+    .base.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); }
 
-    /* ---------- popups ---------- */
-    .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow); font-family: "Poppins", sans-serif; }
-    .leaflet-popup-content { margin: 14px 16px; min-width: 210px; }
-    .pop h3 { margin: 0 0 2px; font-size: 1rem; }
-    .pop .kind { display: inline-block; font-size: .68rem; font-weight: 600; padding: 2px 9px; border-radius: 99px; color: #fff; margin-bottom: 8px; }
-    .pop .kind.pickup { background: var(--ball-dark); }
-    .pop .kind.dropoff { background: var(--drop-dark); }
-    .pop .big { font-size: 1.5rem; font-weight: 700; line-height: 1; }
-    .pop .sub { color: var(--muted); font-size: .78rem; margin: 2px 0 8px; }
+    /* site list */
+    .site { position: relative; overflow: hidden; }
+    .site .bar { position: absolute; left: 0; bottom: 0; height: 3px; border-radius: 3px; }
+    .site .bar.pickup { background: var(--ball); }
+    .site .bar.dropoff { background: var(--drop); }
+    .site b { font-variant-numeric: tabular-nums; font-size: .84rem; }
+
+    /* route tab */
+    .route-opt { align-items: center; }
+    .route-opt input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+    .line { width: 26px; height: 0; border-top: 4px solid; flex: none; }
+    .line.usual { border-color: #8da2ff; border-top-style: dashed; }
+    .line.best { border-color: #ffb800; }
+    .saving { background: rgba(255, 184, 0, .14); border: 1px solid rgba(255, 184, 0, .45); border-radius: 14px; padding: 12px 14px; font-size: .82rem; line-height: 1.5; }
+    ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+    ol.steps li { counter-increment: s; display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: .82rem; border-bottom: 1px dashed var(--line); }
+    ol.steps li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg);
+                          font-size: .68rem; font-weight: 700; display: grid; place-items: center; flex: none; }
+    ol.steps li span { margin-left: auto; color: var(--muted); font-size: .74rem; white-space: nowrap; }
+
+    /* ============ bottom-left summary card ============ */
+    .hud { position: absolute; z-index: 900; left: 14px; bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; max-width: calc(100% - 90px); transition: left .35s; }
+    .stat { border-radius: 16px; padding: 10px 16px; min-width: 128px; }
+    .stat b { font-size: 1.35rem; font-weight: 700; line-height: 1.1; display: block; font-variant-numeric: tabular-nums; }
+    .stat span { font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .stat.pickup b { color: var(--ball-dark); }
+    .stat.dropoff b { color: var(--drop-dark); }
+    .legend { border-radius: 16px; padding: 10px 16px; display: flex; align-items: flex-end; gap: 14px; }
+    .legend .item { text-align: center; font-size: .66rem; color: var(--muted); }
+    .legend .circle { border-radius: 50%; border: 2px solid var(--muted); background: rgba(128,140,134,.2); margin: 0 auto 3px; }
+    .legend .cap { font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); align-self: center; max-width: 60px; line-height: 1.3; }
+
+    /* ============ right-hand map buttons ============ */
+    .tools { position: absolute; z-index: 900; right: 14px; bottom: 64px; display: flex; flex-direction: column; gap: 8px; }
+    .tools .iconbtn { width: 42px; height: 42px; border-radius: 12px; }
+
+    .toast { position: absolute; z-index: 1300; left: 50%; bottom: 26px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+             background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 99px; font-size: .82rem; transition: all .3s; max-width: 90vw; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* ============ map pieces ============ */
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--solid); color: var(--ink); box-shadow: var(--shadow); }
+    .leaflet-popup-content-wrapper { border-radius: 18px; font-family: "Poppins", sans-serif; }
+    .leaflet-popup-content { margin: 16px 18px; min-width: 220px; }
+    .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+    .pop h3 { margin: 0 0 6px; font-size: 1.02rem; padding-right: 14px; }
+    .pop .kind { display: inline-block; font-size: .66rem; font-weight: 600; padding: 2px 10px; border-radius: 99px; margin-bottom: 10px; color: #fff; }
+    .pop .kind.pickup { background: #6f8a0c; }
+    .pop .kind.dropoff { background: #c2431f; }
+    .pop .big { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+    .pop .sub { color: var(--muted); font-size: .76rem; margin: 3px 0 10px; }
+    .pop .hist { max-height: 150px; overflow: auto; }
     .pop table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-    .pop td { padding: 3px 0; border-top: 1px solid #eef0e6; }
+    .pop td { padding: 4px 0; border-top: 1px solid var(--line); }
     .pop td:last-child { text-align: right; font-weight: 600; }
-    .pop .warn { margin-top: 8px; font-size: .72rem; color: #8a5a00; background: #fff4d6; border-radius: 8px; padding: 6px 8px; }
+    .pop .warn { margin-top: 10px; font-size: .72rem; color: #8a5a00; background: #fff1c9; border-radius: 9px; padding: 6px 9px; }
+    :root[data-theme="dark"] .pop .warn { background: rgba(255, 184, 0, .16); color: #ffd36b; }
 
-    .depot-icon {
-      background: var(--ink); color: #fff; width: 30px; height: 30px; border-radius: 8px; font-size: 16px;
-      display: grid; place-items: center; border: 2px solid #fff; box-shadow: var(--shadow);
-    }
+    .leaflet-tooltip { background: var(--solid); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow);
+                       font-family: "Poppins", sans-serif; font-size: .74rem; font-weight: 500; padding: 3px 9px; }
+    .leaflet-tooltip-top:before { border-top-color: var(--solid); }
+    .leaflet-container.low-zoom .leaflet-tooltip.perm { display: none; }  /* name labels only when zoomed in enough to read */
 
-    /* On phones the panel becomes a compact card at the bottom. */
-    @media (max-width: 640px) {
-      .panel { top: auto; bottom: 10px; left: 10px; right: 10px; width: auto; max-height: 45%; padding: 14px; }
-      .stats { margin: 12px 0 10px; }
-      .size-legend { display: none; }
+    .depot-icon { background: var(--ink); color: var(--bg); width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center;
+                  border: 2px solid var(--bg); box-shadow: var(--shadow); position: relative; }
+    .depot-icon::after { content: ""; position: absolute; inset: -6px; border-radius: 14px; border: 2px solid var(--accent); animation: pulse 2.2s infinite; }
+    @keyframes pulse { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+    .stop-num { background: var(--ink); color: var(--bg); width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: 700;
+                display: grid; place-items: center; border: 2px solid var(--bg); box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+    .me { width: 16px; height: 16px; border-radius: 50%; background: #2f7bff; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(47,123,255,.25); }
+
+    .leaflet-control-scale-line { background: var(--card); color: var(--ink); border-color: var(--muted); font-family: "Poppins", sans-serif; font-size: .66rem; }
+    .leaflet-control-attribution { background: var(--card) !important; color: var(--muted); font-size: .66rem; border-radius: 8px 0 0 0; }
+    .leaflet-control-attribution a { color: var(--accent); }
+    .leaflet-bottom.leaflet-right { z-index: 800; }
+
+    /* ============ phones ============ */
+    @media (max-width: 720px) {
+      .brand small, .brand b, .search kbd { display: none; }
+      .brand { padding: 0 8px; }
+      .search { flex: 1 1 auto; }
+      .spacer { display: none; }
+      .drawer { top: 70px; bottom: 10px; left: 10px; width: calc(100vw - 20px); }
+      .hud { left: 10px; bottom: 10px; gap: 8px; max-width: calc(100% - 66px); }
+      .stat { min-width: 0; padding: 8px 12px; }
+      .stat b { font-size: 1.1rem; }
+      .legend { display: none; }
+      .tools { right: 10px; bottom: 70px; }
     }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="map" aria-label="Map of tennis ball collection and dropoff sites"></div>
 
-  <aside class="panel">
-    <div class="brand">
-      <div class="logo"></div>
-      <div>
-        <h1>Bin to Better</h1>
-        <p class="tag">Tennis ball recycling map</p>
-      </div>
+  <!-- ===== top bar: menu button, brand, search, theme switch ===== -->
+  <header class="topbar">
+    <button class="iconbtn glass" id="menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span class="ico" data-icon="menu"></span></button>
+    <div class="brand glass"><div class="logo"></div><div><b>Bin to Better</b><small>Tennis ball recycling map</small></div></div>
+    <div class="search">
+      <label class="box glass"><span class="ico" data-icon="search"></span>
+        <input id="search" type="search" placeholder="Search a site…" autocomplete="off" aria-label="Search sites"><kbd>/</kbd></label>
+      <div class="results glass" id="results" hidden></div>
     </div>
+    <div class="spacer"></div>
+    <button class="iconbtn glass" id="theme-btn" aria-label="Switch between light and dark mode"><span class="ico" id="theme-ico"></span></button>
+  </header>
 
-    <div class="stats">
-      <div class="stat pick"><b id="stat-pick">–</b><span>balls collected</span></div>
-      <div class="stat drop"><b id="stat-drop">–</b><span>balls dropped off</span></div>
-    </div>
+  <!-- ===== slide-out menu ===== -->
+  <aside class="drawer glass" id="drawer" aria-label="Menu">
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="layers" role="tab"><span class="ico" data-icon="layers"></span>Layers</button>
+      <button class="tab" data-tab="sites" role="tab"><span class="ico" data-icon="list"></span>Sites</button>
+      <button class="tab" data-tab="route" role="tab"><span class="ico" data-icon="route"></span>Route</button>
+      <button class="tab" data-tab="about" role="tab"><span class="ico" data-icon="info"></span>About</button>
+    </nav>
 
-    <div class="toggles">
-      <label class="toggle"><input type="checkbox" id="toggle-pickup" checked><span class="dot pick"></span><span>Collection sites (<span id="n-pick">0</span>)</span></label>
-      <label class="toggle"><input type="checkbox" id="toggle-dropoff" checked><span class="dot drop"></span><span>Dropoff sites (<span id="n-drop">0</span>)</span></label>
-    </div>
+    <div class="panels">
+      <section class="panel active" data-panel="layers">
+        <h2>Map style</h2>
+        <div class="bases">
+          <button class="base" data-base="street"><div class="thumb"></div>Street</button>
+          <button class="base" data-base="topo"><div class="thumb"></div>Terrain</button>
+          <button class="base" data-base="sat"><div class="thumb"></div>Satellite</button>
+        </div>
 
-    <div class="routes" id="routes" hidden>
-      <h2>Pickup route</h2>
-      <label class="route-opt"><input type="radio" name="route" value="none" checked><span>Hide route</span></label>
-      <label class="route-opt"><input type="radio" name="route" value="usual"><span class="line usual"></span>
-        <span>Usual (nearest-first)<small id="usual-sub"></small></span></label>
-      <label class="route-opt"><input type="radio" name="route" value="best"><span class="line best"></span>
-        <span>Best (OR-Tools)<small id="best-sub"></small></span></label>
-      <div class="saving" id="saving"></div>
-    </div>
+        <h2>Show on map</h2>
+        <label class="row"><span class="dot pickup"></span><span class="grow">Collection sites<small id="n-pickup"></small></span><input class="switch" type="checkbox" id="t-pickup" checked></label>
+        <label class="row"><span class="dot dropoff"></span><span class="grow">Dropoff sites<small id="n-dropoff"></small></span><input class="switch" type="checkbox" id="t-dropoff" checked></label>
+        <label class="row"><span class="ico" data-icon="tag"></span><span class="grow">Site names<small>Appear when zoomed in</small></span><input class="switch" type="checkbox" id="t-labels"></label>
 
-    <div class="size-legend">
-      Circle size = total balls
-      <div class="row" id="size-legend-row"></div>
+        <h2>Time period</h2>
+        <div class="chips" id="periods"></div>
+
+        <h2>Appearance</h2>
+        <label class="row"><span class="ico" data-icon="moon"></span><span class="grow">Dark mode</span><input class="switch" type="checkbox" id="t-dark"></label>
+      </section>
+
+      <section class="panel" data-panel="sites">
+        <h2>All sites, biggest first</h2>
+        <div id="site-list"></div>
+      </section>
+
+      <section class="panel" data-panel="route">
+        <h2>Pickup route from Fremont</h2>
+        <label class="row route-opt"><input type="radio" name="route" value="none" checked><span class="grow">Hide route</span></label>
+        <label class="row route-opt"><input type="radio" name="route" value="usual"><span class="line usual"></span><span class="grow">Usual (nearest-first)<small id="usual-sub"></small></span></label>
+        <label class="row route-opt"><input type="radio" name="route" value="best"><span class="line best"></span><span class="grow">Best (OR-Tools)<small id="best-sub"></small></span></label>
+        <div class="saving" id="saving" hidden></div>
+        <h2 id="steps-title" hidden>Stops in order</h2>
+        <ol class="steps" id="steps"></ol>
+      </section>
+
+      <section class="panel" data-panel="about">
+        <h2>About</h2>
+        <p><b>Bin to Better</b> collects used tennis balls from clubs and academies and passes them on for reuse and recycling. This map shows every <b>collection site</b> we pick up from and every <b>dropoff site</b> that received balls.</p>
+        <h2>How to read it</h2>
+        <p><span class="dot pickup" style="display:inline-block;vertical-align:-1px"></span> green circles are collection sites, <span class="dot dropoff" style="display:inline-block;vertical-align:-1px"></span> coral circles are dropoff sites. A bigger circle means more balls. Click a circle for its visit history.</p>
+        <p>A dashed outline means the exact location isn't known, so the pin is approximate.</p>
+        <h2>The data</h2>
+        <p id="about-data"></p>
+        <p>The route comparison uses real driving times from OpenStreetMap data and Google OR-Tools. It assumes one driver visiting every collection site, starting and ending in Fremont.</p>
+        <h2>Keyboard</h2>
+        <p><b>/</b> search &nbsp;·&nbsp; <b>M</b> menu &nbsp;·&nbsp; <b>D</b> dark mode &nbsp;·&nbsp; <b>Esc</b> close</p>
+        <p><a href="https://github.com/cloviewovie123/b2bmap" target="_blank" rel="noopener">View the project on GitHub</a></p>
+      </section>
     </div>
-    <p class="note"><span class="dashed"></span> dashed outline = approximate location.<br>Click any circle for its visit history.</p>
   </aside>
 
-  <script>
-    // ---------- 1. Make the map ----------
-    const map = L.map("map", { zoomControl: false }).setView([37.45, -122.0], 10);
-    L.control.zoom({ position: "bottomright" }).addTo(map);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
+  <!-- ===== bottom-left: totals + size key ===== -->
+  <div class="hud">
+    <div class="stat glass pickup"><b id="stat-pickup" data-v="0">–</b><span>balls collected</span></div>
+    <div class="stat glass dropoff"><b id="stat-dropoff" data-v="0">–</b><span>balls dropped off</span></div>
+    <div class="legend glass" id="legend"></div>
+  </div>
 
-    // ---------- 2. Helpers ----------
-    const COLORS = {
-      pickup:  { fill: "#b7d92b", line: "#6f8a0c" },
-      dropoff: { fill: "#ff7a59", line: "#c2431f" }
-    };
-    // Radius grows with the SQUARE ROOT of the ball count, so circle AREA matches the count.
-    // (If we used the count directly, a 3,000-ball site would look 75x bigger than a 40-ball one.)
-    const radius = balls => 4 + Math.sqrt(balls) * 0.4;
+  <!-- ===== right-hand map buttons ===== -->
+  <div class="tools">
+    <button class="iconbtn glass" id="zoom-in" aria-label="Zoom in"><span class="ico" data-icon="plus"></span></button>
+    <button class="iconbtn glass" id="zoom-out" aria-label="Zoom out"><span class="ico" data-icon="minus"></span></button>
+    <button class="iconbtn glass" id="locate" aria-label="Show my location" title="Show my location"><span class="ico" data-icon="locate"></span></button>
+    <button class="iconbtn glass" id="reset" aria-label="Reset view" title="Reset view"><span class="ico" data-icon="home"></span></button>
+    <button class="iconbtn glass" id="fullscreen" aria-label="Full screen" title="Full screen"><span class="ico" data-icon="expand"></span></button>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    // ================= helpers =================
+    const $ = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
     const fmt = n => n.toLocaleString("en-US");
     const nice = iso => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    // Saved settings. Wrapped in try/catch because some browsers block storage.
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+    };
+    function toast(msg) {
+      const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+      clearTimeout(toast.id); toast.id = setTimeout(() => t.classList.remove("show"), 2600);
+    }
+
+    // Simple line icons (SVG paths) so we don't need an icon library.
+    const ICONS = {
+      menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+      search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+      sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+      moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+      layers: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+      list: '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
+      route: '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>',
+      info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+      tag: '<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1"/>',
+      plus: '<path d="M12 5v14M5 12h14"/>',
+      minus: '<path d="M5 12h14"/>',
+      locate: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+      home: '<path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/>',
+      expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'
+    };
+    const svg = name => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+    $$("[data-icon]").forEach(el => el.innerHTML = svg(el.dataset.icon));
+
+    // ================= light / dark mode =================
+    function setTheme(t) {
+      document.documentElement.dataset.theme = t;
+      store.set("btb-theme", t);
+      $("#theme-ico").innerHTML = svg(t === "dark" ? "sun" : "moon");  // button shows what you'd switch TO
+      $("#t-dark").checked = t === "dark";
+    }
+    const toggleTheme = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+    setTheme(document.documentElement.dataset.theme);
+    $("#theme-btn").addEventListener("click", toggleTheme);
+    $("#t-dark").addEventListener("change", e => setTheme(e.target.checked ? "dark" : "light"));
+
+    // ================= the map =================
+    const map = L.map("map", { zoomControl: false, zoomSnap: 0.25 }).setView([37.45, -122.0], 10);
+    L.control.scale({ position: "bottomright", imperial: true }).addTo(map);
+
+    const BASES = {
+      street: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { className: "base-street", maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }),
+      topo: L.tileLayer("https://tile.opentopomap.org/{z}/{x}/{y}.png", { className: "base-topo", maxZoom: 17,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)' }),
+      sat: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { className: "base-sat", maxZoom: 18,
+        attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics' })
+    };
+    let baseKey = BASES[store.get("btb-base")] ? store.get("btb-base") : "street";
+    function setBase(key) {
+      map.removeLayer(BASES[baseKey]); baseKey = key; BASES[key].addTo(map); BASES[key].bringToBack();
+      store.set("btb-base", key);
+      $$(".base").forEach(b => b.classList.toggle("active", b.dataset.base === key));
+    }
+    BASES[baseKey].addTo(map);
+    $$(".base").forEach(b => { b.classList.toggle("active", b.dataset.base === baseKey); b.addEventListener("click", () => setBase(b.dataset.base)); });
+
+    // Only show site-name labels when zoomed in enough to read them.
+    const lowZoom = () => map.getContainer().classList.toggle("low-zoom", map.getZoom() < 11);
+    map.on("zoomend", lowZoom); lowZoom();
+
+    // ================= menu (drawer) =================
+    const drawer = $("#drawer");
+    const isOpen = () => drawer.classList.contains("open");
+    function setMenu(open) {
+      drawer.classList.toggle("open", open);
+      $("#menu-btn").setAttribute("aria-expanded", open);
+      $(".hud").style.left = open && innerWidth > 720 ? "418px" : "";
+    }
+    $("#menu-btn").addEventListener("click", () => setMenu(!isOpen()));
+    function openTab(name) {
+      $$(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+      $$(".panel").forEach(p => p.classList.toggle("active", p.dataset.panel === name));
+    }
+    $$(".tab").forEach(t => t.addEventListener("click", () => openTab(t.dataset.tab)));
+    // Leave room for the open menu when the map zooms to fit something.
+    const pad = () => ({ paddingTopLeft: [isOpen() && innerWidth > 720 ? 420 : 60, 90], paddingBottomRight: [70, 100] });
+
+    // ================= data + drawing =================
+    const state = { pickup: true, dropoff: true, labels: false, period: "all" };
+    const layers = { pickup: L.layerGroup().addTo(map), dropoff: L.layerGroup().addTo(map) };
+    const routeLayer = L.layerGroup().addTo(map);
+    let data = null, markers = {}, allBounds = [];
+
+    // Circle radius grows with the SQUARE ROOT of the count, so circle AREA matches the number of balls.
+    const radius = balls => 4 + Math.sqrt(balls) * 0.4;
+    const COLORS = { pickup: ["--ball", "--ball-dark"], dropoff: ["--drop", "--drop-dark"] };
+    const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const inPeriod = d => state.period === "all" || d.startsWith(state.period);
 
     function popupHtml(s) {
       const rows = s.visits.map(v => `<tr><td>${nice(v.date)}</td><td>${fmt(v.balls)}</td></tr>`).join("");
-      const warn = s.confidence === "low" ? `<div class="warn">Approximate location only.</div>` : "";
-      return `<div class="pop">
-        <h3>${esc(s.name)}</h3>
+      return `<div class="pop"><h3>${esc(s.name)}</h3>
         <span class="kind ${s.type}">${s.type === "pickup" ? "Collection site" : "Dropoff site"}</span>
         <div class="big">${fmt(s.total_balls)} balls</div>
         <div class="sub">${s.num_visits} visit${s.num_visits > 1 ? "s" : ""} · last on ${nice(s.last_visit)}</div>
-        <table>${rows}</table>${warn}</div>`;
+        <div class="hist"><table>${rows}</table></div>
+        ${s.confidence === "low" ? '<div class="warn">Approximate location only.</div>' : ""}</div>`;
     }
 
-    // ---------- 3. Load the data and draw it ----------
-    const sitePos = {};  // site name -> [lat, lon], used to number the route stops
-    const layers = { pickup: L.layerGroup().addTo(map), dropoff: L.layerGroup().addTo(map) };
+    function countTo(el, to) {   // numbers roll up to their new value
+      const from = +el.dataset.v || 0, t0 = performance.now(); el.dataset.v = to;
+      (function step(t) {
+        const k = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - k, 3);
+        el.textContent = fmt(Math.round(from + (to - from) * e));
+        if (k < 1) requestAnimationFrame(step);
+      })(t0);
+    }
 
-    fetch("data/sites.json")
-      .then(r => r.json())
-      .then(data => {
-        const totals = { pickup: 0, dropoff: 0 }, counts = { pickup: 0, dropoff: 0 };
-        const bounds = [];
+    // Redraws everything for the current time period.
+    function render() {
+      layers.pickup.clearLayers(); layers.dropoff.clearLayers(); markers = {};
+      const totals = { pickup: 0, dropoff: 0 }, counts = { pickup: 0, dropoff: 0 }, shown = [];
+      data.sites.forEach(base => {
+        const visits = base.visits.filter(v => inPeriod(v.date));
+        if (!visits.length) return;
+        shown.push({ ...base, visits, num_visits: visits.length, last_visit: visits[0].date,
+                     total_balls: visits.reduce((a, v) => a + v.balls, 0) });
+      });
+      shown.sort((a, b) => b.total_balls - a.total_balls);   // big circles first so small ones stay clickable on top
+      shown.forEach(s => {
+        const [fill, line] = COLORS[s.type];
+        const r = radius(s.total_balls);
+        const m = L.circleMarker([s.lat, s.lon], {
+          radius: r, color: css(line), weight: 2, fillColor: css(fill), fillOpacity: .62,
+          dashArray: s.confidence === "low" ? "4 4" : null
+        }).bindPopup(popupHtml(s), { autoPanPaddingTopLeft: [isOpen() && innerWidth > 720 ? 420 : 20, 90] })
+          .bindTooltip(esc(s.name), { direction: "top", offset: [0, -r], className: state.labels ? "perm" : "", permanent: state.labels })
+          .addTo(layers[s.type]);
+        m.on("mouseover", () => m.setStyle({ weight: 3.5, fillOpacity: .85 }));
+        m.on("mouseout",  () => m.setStyle({ weight: 2, fillOpacity: .62 }));
+        markers[s.name] = { m, s };
+        totals[s.type] += s.total_balls; counts[s.type]++;
+      });
+      countTo($("#stat-pickup"), totals.pickup); countTo($("#stat-dropoff"), totals.dropoff);
+      $("#n-pickup").textContent = `${counts.pickup} sites`; $("#n-dropoff").textContent = `${counts.dropoff} sites`;
+      renderSiteList(shown);
+    }
 
-        // Draw big circles first so small ones end up on top and stay clickable.
-        [...data.sites].sort((a, b) => b.total_balls - a.total_balls).forEach(s => {
-          const c = COLORS[s.type];
-          L.circleMarker([s.lat, s.lon], {
-            radius: radius(s.total_balls),
-            color: c.line, weight: 2, fillColor: c.fill, fillOpacity: .6,
-            dashArray: s.confidence === "low" ? "4 4" : null
-          })
-            .bindPopup(popupHtml(s))
-            .bindTooltip(esc(s.name), { direction: "top", offset: [0, -radius(s.total_balls)] })
-            .addTo(layers[s.type]);
-          totals[s.type] += s.total_balls; counts[s.type]++;
-          bounds.push([s.lat, s.lon]);
-          sitePos[s.name] = [s.lat, s.lon];
-        });
+    function renderSiteList(shown) {
+      const max = Math.max(...shown.map(s => s.total_balls), 1);
+      $("#site-list").innerHTML = shown.map(s => `
+        <button class="row site" data-name="${esc(s.name)}"><span class="dot ${s.type}"></span>
+          <span class="grow">${esc(s.name)}<small>${s.num_visits} visit${s.num_visits > 1 ? "s" : ""} · ${s.type === "pickup" ? "collection" : "dropoff"}</small></span>
+          <b>${fmt(s.total_balls)}</b><i class="bar ${s.type}" style="width:${(100 * s.total_balls / max).toFixed(1)}%"></i></button>`).join("");
+      $$("#site-list .site").forEach(b => b.addEventListener("click", () => {
+        focusSite(b.dataset.name); if (innerWidth <= 720) setMenu(false);
+      }));
+    }
 
-        // Fremont: where every trip starts and ends.
-        L.marker([data.depot.lat, data.depot.lon], {
-          icon: L.divIcon({ className: "", html: '<div class="depot-icon">🏠</div>', iconSize: [30, 30], iconAnchor: [15, 15] }),
-          zIndexOffset: 1000
-        }).bindTooltip(data.depot.name).addTo(map);
-        bounds.push([data.depot.lat, data.depot.lon]);
+    function focusSite(name) {
+      const hit = markers[name];
+      if (!hit) { toast("That site has no visits in this time period."); return; }
+      map.flyTo(hit.m.getLatLng(), Math.max(map.getZoom(), 13), { duration: .8 });
+      map.once("moveend", () => hit.m.openPopup());
+    }
 
-        document.getElementById("stat-pick").textContent = fmt(totals.pickup);
-        document.getElementById("stat-drop").textContent = fmt(totals.dropoff);
-        document.getElementById("n-pick").textContent = counts.pickup;
-        document.getElementById("n-drop").textContent = counts.dropoff;
-        map.fitBounds(bounds, { padding: [60, 60] });
-
-        // Size legend (example circles)
-        document.getElementById("size-legend-row").innerHTML = [100, 1000, 3000].map(n => {
-          const d = radius(n) * 2;
-          return `<div class="item"><div class="circle" style="width:${d}px;height:${d}px"></div>${fmt(n)}</div>`;
-        }).join("");
-      })
-      .catch(() => alert("Could not load data/sites.json. If you opened index.html by double-clicking, run a local server instead (see NOTES)."));
-
-    // ---------- 3b. Route comparison (made by scripts/optimize_route.py) ----------
-    const routeLayer = L.layerGroup().addTo(map);
-    const STYLE = { usual: { color: "#5b6b9a", dashArray: "8 8" }, best: { color: "#e0a100", dashArray: null } };
-    let routes = null, siteLatLon = {};
-
-    fetch("data/routes.json").then(r => r.json()).then(r => {
-      routes = r;
-      const hm = m => Math.floor(m / 60) ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${Math.round(m)} min`;
-      document.getElementById("usual-sub").textContent = `${hm(r.usual.total_minutes)} · ${r.usual.total_miles} mi`;
-      document.getElementById("best-sub").textContent = `${hm(r.best.total_minutes)} · ${r.best.total_miles} mi`;
-      document.getElementById("saving").innerHTML =
-        `The best order saves about <b>${Math.round(r.saved_minutes)} min</b> and <b>${r.saved_miles} miles</b> per trip (${r.saved_percent}% less driving).`;
-      document.getElementById("routes").hidden = false;
-    }).catch(() => {});
+    // ================= route comparison =================
+    const STYLE = { usual: { color: "#8da2ff", dashArray: "9 9" }, best: { color: "#ffb800", dashArray: null } };
+    let routes = null;
+    const hm = m => Math.floor(m / 60) ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${Math.round(m)} min`;
 
     function showRoute(which) {
       routeLayer.clearLayers();
+      $("#steps").innerHTML = ""; $("#steps-title").hidden = which === "none";
       if (which === "none" || !routes) return;
-      const r = routes[which], st = STYLE[which];
-      const line = L.polyline(r.path.map(([lon, lat]) => [lat, lon]), { ...st, weight: 5, opacity: .9 }).addTo(routeLayer);
-      // numbered stop badges, using the site positions already on the map
+      const r = routes[which], pts = r.path.map(([lon, lat]) => [lat, lon]);
+      L.polyline(pts, { color: "#fff", weight: 10, opacity: .85, lineCap: "round" }).addTo(routeLayer);          // white outline so it pops on any map
+      const line = L.polyline(pts, { ...STYLE[which], weight: 5, opacity: 1, lineCap: "round" }).addTo(routeLayer);
       r.order.slice(1, -1).forEach((name, i) => {
-        const p = sitePos[name];
-        if (p) L.marker(p, { interactive: false, zIndexOffset: 900,
-          icon: L.divIcon({ className: "", html: `<div class="stop-num">${i + 1}</div>`, iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(routeLayer);
+        const hit = markers[name], ll = hit ? hit.m.getLatLng() : null;
+        if (ll) L.marker(ll, { interactive: false, zIndexOffset: 900,
+          icon: L.divIcon({ className: "", html: `<div class="stop-num">${i + 1}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(routeLayer);
       });
-      map.fitBounds(line.getBounds(), { padding: [60, 60] });
+      $("#steps").innerHTML = r.order.slice(1, -1).map((name, i) =>
+        `<li>${esc(name)}<span>+${Math.round(r.legs[i].minutes)} min</span></li>`).join("") +
+        `<li style="border:0">Back to Fremont<span>+${Math.round(r.legs[r.legs.length - 1].minutes)} min</span></li>`;
+      map.fitBounds(line.getBounds(), pad());
     }
-    document.querySelectorAll('input[name="route"]').forEach(el =>
-      el.addEventListener("change", e => showRoute(e.target.value)));
+    $$('input[name="route"]').forEach(el => el.addEventListener("change", e => showRoute(e.target.value)));
 
-    // ---------- 4. Checkboxes show/hide the two kinds of sites ----------
-    ["pickup", "dropoff"].forEach(type => {
-      document.getElementById("toggle-" + type).addEventListener("change", e => {
-        e.target.checked ? map.addLayer(layers[type]) : map.removeLayer(layers[type]);
-      });
+    // ================= load the data =================
+    fetch("data/sites.json").then(r => r.json()).then(d => {
+      data = d;
+      data.sites.forEach(s => allBounds.push([s.lat, s.lon]));
+      allBounds.push([d.depot.lat, d.depot.lon]);
+
+      // Fremont: where every trip starts and ends
+      L.marker([d.depot.lat, d.depot.lon], { zIndexOffset: 1000,
+        icon: L.divIcon({ className: "", html: '<div class="depot-icon">🏠</div>', iconSize: [32, 32], iconAnchor: [16, 16] })
+      }).bindTooltip(d.depot.name, { direction: "top", offset: [0, -16] }).addTo(map);
+
+      // time-period chips come from the years that actually appear in the data
+      const years = [...new Set(d.sites.flatMap(s => s.visits.map(v => v.date.slice(0, 4))))].sort();
+      $("#periods").innerHTML = [["all", "All time"], ...years.map(y => [y, y])].map(([k, label]) =>
+        `<button class="chip${k === "all" ? " active" : ""}" data-p="${k}">${label}</button>`).join("");
+      $$("#periods .chip").forEach(c => c.addEventListener("click", () => {
+        state.period = c.dataset.p;
+        $$("#periods .chip").forEach(x => x.classList.toggle("active", x === c));
+        render();
+      }));
+
+      const dates = d.sites.flatMap(s => s.visits.map(v => v.date)).sort();
+      $("#about-data").textContent = `Based on ${d.sites.length} sites and ${d.sites.reduce((a, s) => a + s.num_visits, 0)} recorded visits, ` +
+        `from ${nice(dates[0])} to ${nice(dates[dates.length - 1])}. Contact details are never shown here.`;
+
+      // size key
+      $("#legend").innerHTML = '<span class="cap">Circle size</span>' + [100, 1000, 3000].map(n => {
+        const px = radius(n) * 2;
+        return `<div class="item"><div class="circle" style="width:${px}px;height:${px}px"></div>${fmt(n)}</div>`;
+      }).join("");
+
+      render();
+      map.fitBounds(allBounds, pad());
+    }).catch(() => toast("Could not load the site data."));
+
+    fetch("data/routes.json").then(r => r.json()).then(r => {
+      routes = r;
+      $("#usual-sub").textContent = `${hm(r.usual.total_minutes)} · ${r.usual.total_miles} mi`;
+      $("#best-sub").textContent = `${hm(r.best.total_minutes)} · ${r.best.total_miles} mi`;
+      $("#saving").innerHTML = `The best order saves about <b>${Math.round(r.saved_minutes)} min</b> and <b>${r.saved_miles} miles</b> per trip (${r.saved_percent}% less driving).`;
+      $("#saving").hidden = false;
+    }).catch(() => {});
+
+    // ================= layer switches =================
+    ["pickup", "dropoff"].forEach(type => $("#t-" + type).addEventListener("change", e => {
+      state[type] = e.target.checked;
+      e.target.checked ? map.addLayer(layers[type]) : map.removeLayer(layers[type]);
+    }));
+    $("#t-labels").addEventListener("change", e => { state.labels = e.target.checked; if (data) render(); });
+    // Marker colors are read from the theme, so redraw when the theme changes.
+    new MutationObserver(() => { if (data) render(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+    // ================= search =================
+    const input = $("#search"), results = $("#results");
+    let selIdx = 0, matches = [];
+    function showResults() {
+      const q = input.value.trim().toLowerCase();
+      if (!q || !data) { results.hidden = true; return; }
+      matches = data.sites.filter(s => s.name.toLowerCase().includes(q)).slice(0, 8);
+      selIdx = 0;
+      results.innerHTML = matches.length
+        ? matches.map((s, i) => `<button class="result${i === 0 ? " sel" : ""}" data-i="${i}"><span class="dot ${s.type}"></span>${esc(s.name)}<small>${fmt(s.visits.reduce((a, v) => a + v.balls, 0))} balls</small></button>`).join("")
+        : '<div class="none">No matching site</div>';
+      results.hidden = false;
+      $$("#results .result").forEach(b => b.addEventListener("click", () => pick(matches[+b.dataset.i])));
+    }
+    function pick(s) { results.hidden = true; input.value = ""; input.blur(); focusSite(s.name); }
+    input.addEventListener("input", showResults);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" && matches[selIdx]) pick(matches[selIdx]);
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        selIdx = (selIdx + (e.key === "ArrowDown" ? 1 : -1) + matches.length) % Math.max(matches.length, 1);
+        $$("#results .result").forEach((b, i) => b.classList.toggle("sel", i === selIdx));
+      }
+    });
+    document.addEventListener("click", e => { if (!e.target.closest(".search")) results.hidden = true; });
+
+    // ================= map buttons =================
+    $("#zoom-in").addEventListener("click", () => map.zoomIn());
+    $("#zoom-out").addEventListener("click", () => map.zoomOut());
+    $("#reset").addEventListener("click", () => map.flyToBounds(allBounds, { ...pad(), duration: .8 }));
+    $("#fullscreen").addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => toast("Full screen isn't available here."));
+      else toast("Full screen isn't available here.");
+    });
+    let me = null;
+    $("#locate").addEventListener("click", () => { toast("Finding you…"); map.locate({ setView: true, maxZoom: 13 }); });
+    map.on("locationfound", e => {
+      if (me) map.removeLayer(me);
+      me = L.marker(e.latlng, { icon: L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).bindTooltip("You are here").addTo(map);
+      toast("Found you. Your location stays in your browser.");
+    });
+    map.on("locationerror", () => toast("Couldn't get your location."));
+
+    // ================= keyboard shortcuts =================
+    document.addEventListener("keydown", e => {
+      const typing = /input|textarea/i.test(document.activeElement.tagName);
+      if (e.key === "Escape") { results.hidden = true; input.blur(); if (isOpen()) setMenu(false); return; }
+      if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "/") { e.preventDefault(); input.focus(); }
+      if (e.key.toLowerCase() === "m") setMenu(!isOpen());
+      if (e.key.toLowerCase() === "d") toggleTheme();
     });
   </script>
 </body>
