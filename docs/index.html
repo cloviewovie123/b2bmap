@@ -175,18 +175,34 @@
     .site .bar.dropoff { background: var(--drop); }
     .site b { font-variant-numeric: tabular-nums; font-size: .84rem; }
 
-    /* route tab */
+    /* route planner */
     .route-opt { align-items: center; }
     .route-opt input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
     .line { width: 26px; height: 0; border-top: 4px solid; flex: none; }
+    .line.mine { border-color: #e879f9; border-top-style: dotted; }
     .line.usual { border-color: #8da2ff; border-top-style: dashed; }
     .line.best { border-color: #ffb800; }
-    .saving { background: rgba(255, 184, 0, .14); border: 1px solid rgba(255, 184, 0, .45); border-radius: 14px; padding: 12px 14px; font-size: .82rem; line-height: 1.5; }
-    ol.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
-    ol.steps li { counter-increment: s; display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: .82rem; border-bottom: 1px dashed var(--line); }
-    ol.steps li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg);
+    .saving { background: rgba(255, 184, 0, .14); border: 1px solid rgba(255, 184, 0, .45); border-radius: 14px; padding: 12px 14px; font-size: .82rem; line-height: 1.5; margin-bottom: 8px; }
+    .empty { border: 1.5px dashed var(--line); border-radius: 14px; padding: 14px; font-size: .82rem; color: var(--muted); line-height: 1.55; }
+    .btns { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+    .btn { padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); background: var(--solid); font-size: .78rem; font-weight: 500; }
+    .btn:hover { border-color: var(--accent); }
+    .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+    ol.steps, ol.plan { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+    ol.steps li, ol.plan li { counter-increment: s; display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: .82rem; border-bottom: 1px dashed var(--line); }
+    ol.steps li::before, ol.plan li::before { content: counter(s); width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg);
                           font-size: .68rem; font-weight: 700; display: grid; place-items: center; flex: none; }
     ol.steps li span { margin-left: auto; color: var(--muted); font-size: .74rem; white-space: nowrap; }
+    ol.plan .nm { flex: 1; min-width: 0; }
+    .mini { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: var(--solid); display: grid; place-items: center; font-size: .8rem; line-height: 1; padding: 0; flex: none; }
+    .mini:hover { border-color: var(--accent); }
+    .site-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; font: inherit; color: inherit; }
+    .site:hover { border-color: var(--accent); }
+    .add-btn { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--solid); font-size: 1rem; display: grid; place-items: center; flex: none; padding: 0; position: relative; z-index: 1; }
+    .add-btn:hover { border-color: var(--accent); }
+    .add-btn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .pop-add { margin-top: 12px; width: 100%; padding: 9px 12px; border-radius: 10px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: .78rem; }
+    .pop-add.in { background: var(--soft); color: var(--ink); }
 
     /* ============ bottom-left summary card ============ */
     .hud { position: absolute; z-index: 900; left: 14px; bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; max-width: calc(100% - 90px); transition: left .35s; }
@@ -281,7 +297,7 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="layers" role="tab"><span class="ico" data-icon="layers"></span>Layers</button>
       <button class="tab" data-tab="sites" role="tab"><span class="ico" data-icon="list"></span>Sites</button>
-      <button class="tab" data-tab="route" role="tab"><span class="ico" data-icon="route"></span>Route</button>
+      <button class="tab" data-tab="plan" role="tab"><span class="ico" data-icon="route"></span>Plan</button>
       <button class="tab" data-tab="about" role="tab"><span class="ico" data-icon="info"></span>About</button>
     </nav>
 
@@ -311,14 +327,25 @@
         <div id="site-list"></div>
       </section>
 
-      <section class="panel" data-panel="route">
-        <h2>Pickup route from Fremont</h2>
-        <label class="row route-opt"><input type="radio" name="route" value="none" checked><span class="grow">Hide route</span></label>
-        <label class="row route-opt"><input type="radio" name="route" value="usual"><span class="line usual"></span><span class="grow">Usual (nearest-first)<small id="usual-sub"></small></span></label>
-        <label class="row route-opt"><input type="radio" name="route" value="best"><span class="line best"></span><span class="grow">Best (OR-Tools)<small id="best-sub"></small></span></label>
-        <div class="saving" id="saving" hidden></div>
-        <h2 id="steps-title" hidden>Stops in order</h2>
-        <ol class="steps" id="steps"></ol>
+      <section class="panel" data-panel="plan">
+        <h2>Your route (starts and ends in Fremont)</h2>
+        <div class="empty" id="plan-empty">Pick the places you're visiting. Click a circle on the map and press <b>Add to route</b>, or use the <b>+</b> buttons in the Sites tab. Add them in the order you plan to drive.</div>
+        <ol class="plan" id="plan-list"></ol>
+        <div class="btns">
+          <button class="btn primary" id="plan-all">Add all collection sites</button>
+          <button class="btn" id="plan-clear">Clear</button>
+        </div>
+
+        <div id="plan-results" hidden>
+          <h2>Compare the order</h2>
+          <label class="row route-opt"><input type="radio" name="plan-view" value="mine"><span class="line mine"></span><span class="grow">My order<small id="sub-mine"></small></span></label>
+          <label class="row route-opt"><input type="radio" name="plan-view" value="usual"><span class="line usual"></span><span class="grow">Nearest-first<small id="sub-usual"></small></span></label>
+          <label class="row route-opt"><input type="radio" name="plan-view" value="best"><span class="line best"></span><span class="grow">Best order<small id="sub-best"></small></span></label>
+          <div class="saving" id="plan-saving"></div>
+          <div class="btns"><button class="btn" id="plan-zoom">Zoom to route</button></div>
+          <h2>Stops in order</h2>
+          <ol class="steps" id="steps"></ol>
+        </div>
       </section>
 
       <section class="panel" data-panel="about">
@@ -329,7 +356,7 @@
         <p>A dashed outline means the exact location isn't known, so the pin is approximate.</p>
         <h2>The data</h2>
         <p id="about-data"></p>
-        <p>The route comparison uses real driving times from OpenStreetMap data and Google OR-Tools. It assumes one driver visiting every collection site, starting and ending in Fremont.</p>
+        <p>The route comparison uses real driving times from OpenStreetMap data and Google OR-Tools. Pick any stops in the Plan tab; it assumes one driver starting and ending in Fremont.</p>
         <h2>Keyboard</h2>
         <p><b>/</b> search &nbsp;·&nbsp; <b>M</b> menu &nbsp;·&nbsp; <b>D</b> dark mode &nbsp;·&nbsp; <b>Esc</b> close</p>
         <p><a href="https://github.com/cloviewovie123/b2bmap" target="_blank" rel="noopener">View the project on GitHub</a></p>
@@ -458,6 +485,13 @@
     const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
     const inPeriod = d => state.period === "all" || d.startsWith(state.period);
 
+    // Circle look. Stops in your route get a thick dark outline.
+    function styleFor(s, hover) {
+      const [fill, line] = COLORS[s.type], picked = plan.includes(s.name);
+      return { color: picked ? css("--ink") : css(line), weight: picked ? 4 : 2, fillColor: css(fill),
+               fillOpacity: hover ? .85 : .62, dashArray: !picked && s.confidence === "low" ? "4 4" : null };
+    }
+
     function popupHtml(s) {
       const rows = s.visits.map(v => `<tr><td>${nice(v.date)}</td><td>${fmt(v.balls)}</td></tr>`).join("");
       return `<div class="pop"><h3>${esc(s.name)}</h3>
@@ -465,7 +499,8 @@
         <div class="big">${fmt(s.total_balls)} balls</div>
         <div class="sub">${s.num_visits} visit${s.num_visits > 1 ? "s" : ""} · last on ${nice(s.last_visit)}</div>
         <div class="hist"><table>${rows}</table></div>
-        ${s.confidence === "low" ? '<div class="warn">Approximate location only.</div>' : ""}</div>`;
+        ${s.confidence === "low" ? '<div class="warn">Approximate location only.</div>' : ""}
+        <button class="pop-add${plan.includes(s.name) ? " in" : ""}" data-name="${esc(s.name)}">${plan.includes(s.name) ? "✓ In your route · remove" : "+ Add to route"}</button></div>`;
     }
 
     function countTo(el, to) {   // numbers roll up to their new value
@@ -489,16 +524,13 @@
       });
       shown.sort((a, b) => b.total_balls - a.total_balls);   // big circles first so small ones stay clickable on top
       shown.forEach(s => {
-        const [fill, line] = COLORS[s.type];
         const r = radius(s.total_balls);
-        const m = L.circleMarker([s.lat, s.lon], {
-          radius: r, color: css(line), weight: 2, fillColor: css(fill), fillOpacity: .62,
-          dashArray: s.confidence === "low" ? "4 4" : null
-        }).bindPopup(popupHtml(s), { autoPanPaddingTopLeft: [isOpen() && innerWidth > 720 ? 420 : 20, 90] })
+        const m = L.circleMarker([s.lat, s.lon], { radius: r, ...styleFor(s) })
+          .bindPopup(() => popupHtml(s), { autoPanPaddingTopLeft: [isOpen() && innerWidth > 720 ? 420 : 20, 90] })
           .bindTooltip(esc(s.name), { direction: "top", offset: [0, -r], className: state.labels ? "perm" : "", permanent: state.labels })
           .addTo(layers[s.type]);
-        m.on("mouseover", () => m.setStyle({ weight: 3.5, fillOpacity: .85 }));
-        m.on("mouseout",  () => m.setStyle({ weight: 2, fillOpacity: .62 }));
+        m.on("mouseover", () => m.setStyle(styleFor(s, true)));
+        m.on("mouseout",  () => m.setStyle(styleFor(s)));
         markers[s.name] = { m, s };
         totals[s.type] += s.total_balls; counts[s.type]++;
       });
@@ -510,12 +542,16 @@
     function renderSiteList(shown) {
       const max = Math.max(...shown.map(s => s.total_balls), 1);
       $("#site-list").innerHTML = shown.map(s => `
-        <button class="row site" data-name="${esc(s.name)}"><span class="dot ${s.type}"></span>
+        <div class="row site"><button class="site-main" data-name="${esc(s.name)}"><span class="dot ${s.type}"></span>
           <span class="grow">${esc(s.name)}<small>${s.num_visits} visit${s.num_visits > 1 ? "s" : ""} · ${s.type === "pickup" ? "collection" : "dropoff"}</small></span>
-          <b>${fmt(s.total_balls)}</b><i class="bar ${s.type}" style="width:${(100 * s.total_balls / max).toFixed(1)}%"></i></button>`).join("");
-      $$("#site-list .site").forEach(b => b.addEventListener("click", () => {
+          <b>${fmt(s.total_balls)}</b></button>
+          <button class="add-btn" data-name="${esc(s.name)}" aria-label="Add ${esc(s.name)} to route"></button>
+          <i class="bar ${s.type}" style="width:${(100 * s.total_balls / max).toFixed(1)}%"></i></div>`).join("");
+      $$("#site-list .site-main").forEach(b => b.addEventListener("click", () => {
         focusSite(b.dataset.name); if (innerWidth <= 720) setMenu(false);
       }));
+      $$("#site-list .add-btn").forEach(b => b.addEventListener("click", () => togglePlan(b.dataset.name)));
+      refreshAddButtons();
     }
 
     function focusSite(name) {
@@ -525,33 +561,175 @@
       map.once("moveend", () => hit.m.openPopup());
     }
 
-    // ================= route comparison =================
-    const STYLE = { usual: { color: "#8da2ff", dashArray: "9 9" }, best: { color: "#ffb800", dashArray: null } };
-    let routes = null;
+    // ================= route planner =================
+    // GitHub Pages can't run Python, so the page uses data/matrix.json: the real driving time and
+    // distance between every pair of places (made by scripts/build_matrix.py with OSRM).
+    let M = null, LL = [];            // M = the table, LL = [lat, lon] for each place in the table
+    let plan = [];                    // site names, in the order you added them
+    let planView = "best";            // which order is drawn: mine | usual | best
+    const siteByName = {}, roadCache = {};
+    let drawToken = 0;
+    const lineLayer = L.layerGroup().addTo(map), badgeLayer = L.layerGroup().addTo(map);
+    const STYLE = { mine: { color: "#e879f9", dashArray: "1 11" }, usual: { color: "#8da2ff", dashArray: "9 9" }, best: { color: "#ffb800", dashArray: null } };
     const hm = m => Math.floor(m / 60) ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${Math.round(m)} min`;
+    const idx = name => M.names.indexOf(name);
 
-    function showRoute(which) {
-      routeLayer.clearLayers();
-      $("#steps").innerHTML = ""; $("#steps-title").hidden = which === "none";
-      if (which === "none" || !routes) return;
-      const r = routes[which], pts = r.path.map(([lon, lat]) => [lat, lon]);
-      L.polyline(pts, { color: "#fff", weight: 10, opacity: .85, lineCap: "round" }).addTo(routeLayer);          // white outline so it pops on any map
-      const line = L.polyline(pts, { ...STYLE[which], weight: 5, opacity: 1, lineCap: "round" }).addTo(routeLayer);
-      r.order.slice(1, -1).forEach((name, i) => {
-        const hit = markers[name], ll = hit ? hit.m.getLatLng() : null;
-        if (ll) L.marker(ll, { interactive: false, zIndexOffset: 900,
-          icon: L.divIcon({ className: "", html: `<div class="stop-num">${i + 1}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(routeLayer);
-      });
-      $("#steps").innerHTML = r.order.slice(1, -1).map((name, i) =>
-        `<li>${esc(name)}<span>+${Math.round(r.legs[i].minutes)} min</span></li>`).join("") +
-        `<li style="border:0">Back to Fremont<span>+${Math.round(r.legs[r.legs.length - 1].minutes)} min</span></li>`;
-      map.fitBounds(line.getBounds(), pad());
+    // total time and distance of an order (a list of table positions; 0 is Fremont)
+    function cost(order) {
+      let sec = 0, m = 0;
+      for (let i = 0; i < order.length - 1; i++) { sec += M.seconds[order[i]][order[i + 1]]; m += M.meters[order[i]][order[i + 1]]; }
+      return { sec, min: sec / 60, mi: m / 1609.344 };
     }
-    $$('input[name="route"]').forEach(el => el.addEventListener("change", e => showRoute(e.target.value)));
+    // "Nearest-first": from Fremont, always drive to the closest place not yet visited.
+    function nearestOrder(stops) {
+      const left = new Set(stops), out = [0]; let cur = 0;
+      while (left.size) {
+        let best = -1, bd = Infinity;
+        for (const j of left) if (M.seconds[cur][j] < bd) { bd = M.seconds[cur][j]; best = j; }
+        out.push(best); left.delete(best); cur = best;
+      }
+      return [...out, 0];
+    }
+    // "Best": the true shortest loop. Held-Karp tries every ordering in a clever way; fine up to 15 stops.
+    // Past that we improve the nearest-first order with 2-opt (reverse a stretch if it saves time).
+    function bestOrder(stops) {
+      const n = stops.length, D = (a, b) => M.seconds[a][b];
+      if (n <= 1) return [0, ...stops, 0];
+      if (n <= 15) {
+        const N = 1 << n, dp = new Float64Array(N * n).fill(Infinity), par = new Int8Array(N * n).fill(-1);
+        for (let j = 0; j < n; j++) dp[(1 << j) * n + j] = D(0, stops[j]);
+        for (let mask = 1; mask < N; mask++) for (let j = 0; j < n; j++) {
+          if (!(mask & (1 << j))) continue;
+          const cur = dp[mask * n + j]; if (cur === Infinity) continue;
+          for (let k = 0; k < n; k++) {
+            if (mask & (1 << k)) continue;
+            const nm = mask | (1 << k), c = cur + D(stops[j], stops[k]);
+            if (c < dp[nm * n + k]) { dp[nm * n + k] = c; par[nm * n + k] = j; }
+          }
+        }
+        let bj = 0, bc = Infinity;
+        for (let j = 0; j < n; j++) { const c = dp[(N - 1) * n + j] + D(stops[j], 0); if (c < bc) { bc = c; bj = j; } }
+        const seq = []; let mask = N - 1, j = bj;
+        while (j !== -1) { seq.push(stops[j]); const pj = par[mask * n + j]; mask &= ~(1 << j); j = pj; }
+        return [0, ...seq.reverse(), 0];
+      }
+      let order = nearestOrder(stops), improved = true;
+      while (improved) {
+        improved = false;
+        for (let i = 1; i < order.length - 2; i++) for (let k = i + 1; k < order.length - 1; k++) {
+          const next = [...order.slice(0, i), ...order.slice(i, k + 1).reverse(), ...order.slice(k + 1)];
+          if (cost(next).sec < cost(order).sec - 1) { order = next; improved = true; }
+        }
+      }
+      return order;
+    }
+    function compute() {
+      const stops = plan.map(idx);
+      const mk = order => ({ order, ...cost(order) });
+      return { mine: mk([0, ...stops, 0]), usual: mk(nearestOrder(stops)), best: mk(bestOrder(stops)), exact: stops.length <= 15 };
+    }
+
+    // ---- changing the plan ----
+    function savePlan() { store.set("btb-plan", JSON.stringify(plan)); }
+    function planChanged(fit) {
+      savePlan(); restyle(); refreshAddButtons(); drawPlan(fit);
+    }
+    function togglePlan(name) {
+      plan = plan.includes(name) ? plan.filter(n => n !== name) : [...plan, name];
+      planChanged(plan.length === 1 ? true : "auto");   // zoom to fit if the route now goes off-screen
+    }
+    function movePlan(name, dir) {
+      const i = plan.indexOf(name), j = i + dir;
+      if (i < 0 || j < 0 || j >= plan.length) return;
+      [plan[i], plan[j]] = [plan[j], plan[i]]; planChanged(false);
+    }
+    function restyle() { Object.values(markers).forEach(({ m, s }) => m.setStyle(styleFor(s))); }
+    function refreshAddButtons() {
+      $$("#site-list .add-btn").forEach(b => { const on = plan.includes(b.dataset.name); b.classList.toggle("on", on); b.textContent = on ? "✓" : "+"; });
+    }
+    // The "Add to route" button inside a map popup
+    document.addEventListener("click", e => {
+      const b = e.target.closest(".pop-add"); if (!b) return;
+      togglePlan(b.dataset.name);
+      const inn = plan.includes(b.dataset.name);
+      b.classList.toggle("in", inn); b.textContent = inn ? "✓ In your route · remove" : "+ Add to route";
+    });
+    $("#plan-all").addEventListener("click", () => {
+      if (!data) return;
+      plan = data.sites.filter(s => s.type === "pickup").map(s => s.name); planChanged(true);
+      toast("Added all collection sites.");
+    });
+    $("#plan-clear").addEventListener("click", () => { plan = []; planChanged(false); });
+    $("#plan-zoom").addEventListener("click", () => drawPlan(true));
+    $("#plan-list").addEventListener("click", e => {
+      const b = e.target.closest(".mini"); if (!b) return;
+      if (b.dataset.act === "rm") togglePlan(b.dataset.name); else movePlan(b.dataset.name, b.dataset.act === "up" ? -1 : 1);
+    });
+    $$('input[name="plan-view"]').forEach(el => el.addEventListener("change", e => { planView = e.target.value; drawPlan(true); }));
+
+    // ---- showing the plan ----
+    function renderPlanPanel(R) {
+      $("#plan-empty").hidden = plan.length > 0;
+      $("#plan-list").innerHTML = plan.map(n => `<li><span class="nm">${esc(n)}</span>
+        <button class="mini" data-act="up" data-name="${esc(n)}" aria-label="Move up">↑</button>
+        <button class="mini" data-act="down" data-name="${esc(n)}" aria-label="Move down">↓</button>
+        <button class="mini" data-act="rm" data-name="${esc(n)}" aria-label="Remove">×</button></li>`).join("");
+      $("#plan-results").hidden = !R;
+      if (!R) return;
+      ["mine", "usual", "best"].forEach(k => {
+        $("#sub-" + k).textContent = `${hm(R[k].min)} · ${R[k].mi.toFixed(1)} mi`;
+        document.querySelector(`input[name="plan-view"][value="${k}"]`).checked = planView === k;
+      });
+      const dm = R.mine.min - R.best.min, dmi = R.mine.mi - R.best.mi, dn = R.usual.min - R.best.min;
+      let t = plan.length < 2 ? "Add another stop to compare different orders."
+        : dm > 0.5 ? `The best order saves <b>${Math.round(dm)} min</b> and <b>${dmi.toFixed(1)} miles</b> compared with your order.`
+        : "Your order is already the best one.";
+      if (plan.length >= 2 && dn > 0.5) t += ` Nearest-first would take ${Math.round(dn)} min longer than the best.`;
+      if (!R.exact) t += " (With 16+ stops this is a very good order, not a guaranteed best.)";
+      $("#plan-saving").innerHTML = t;
+      const o = R[planView].order;
+      $("#steps").innerHTML = o.slice(1).map((i, k) =>
+        `<li${k === o.length - 2 ? ' style="border:0"' : ""}>${k === o.length - 2 ? "Back to Fremont" : esc(M.names[i])}<span>+${Math.round(M.seconds[o[k]][i] / 60)} min</span></li>`).join("");
+    }
+
+    async function drawPlan(fit) {
+      if (!M || !data) return;
+      lineLayer.clearLayers(); badgeLayer.clearLayers();
+      const token = ++drawToken;
+      if (!plan.length) { renderPlanPanel(null); return; }
+      const R = compute(); renderPlanPanel(R);
+      const o = R[planView].order, st = STYLE[planView];
+      o.slice(1, -1).forEach((i, k) => L.marker(LL[i], { interactive: false, zIndexOffset: 900,
+        icon: L.divIcon({ className: "", html: `<div class="stop-num">${k + 1}</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }) }).addTo(badgeLayer));
+      const paint = pts => {
+        lineLayer.clearLayers();
+        L.polyline(pts, { color: "#fff", weight: 10, opacity: .85, lineCap: "round" }).addTo(lineLayer);   // white outline so it shows on any map
+        return L.polyline(pts, { ...st, weight: 5, opacity: 1, lineCap: "round" }).addTo(lineLayer);
+      };
+      let line = paint(o.map(i => LL[i]));                      // straight lines right away...
+      if (fit === true || (fit === "auto" && !map.getBounds().contains(line.getBounds()))) map.fitBounds(line.getBounds(), pad());
+      const key = o.join("-");
+      if (!roadCache[key]) {                                    // ...then swap in the real roads from OSRM
+        try {
+          const url = "https://router.project-osrm.org/route/v1/driving/" + o.map(i => `${LL[i][1]},${LL[i][0]}`).join(";") + "?overview=full&geometries=geojson";
+          const j = await (await fetch(url)).json();
+          roadCache[key] = j.routes[0].geometry.coordinates.map(([lo, la]) => [la, lo]);
+        } catch (e) { roadCache[key] = null; toast("Couldn't load road shapes, showing straight lines."); }
+      }
+      if (token === drawToken && roadCache[key]) paint(roadCache[key]);
+    }
+
+    function initPlan() {
+      LL = M.names.map(n => n === data.depot.name ? [data.depot.lat, data.depot.lon] : [siteByName[n].lat, siteByName[n].lon]);
+      try { plan = (JSON.parse(store.get("btb-plan") || "[]") || []).filter(n => M.names.includes(n) && n !== data.depot.name); } catch (e) { plan = []; }
+      restyle(); refreshAddButtons(); drawPlan(false);
+    }
 
     // ================= load the data =================
+    const matrixP = fetch("data/matrix.json").then(r => r.json());
     fetch("data/sites.json").then(r => r.json()).then(d => {
       data = d;
+      data.sites.forEach(x => siteByName[x.name] = x);
       data.sites.forEach(s => allBounds.push([s.lat, s.lon]));
       allBounds.push([d.depot.lat, d.depot.lon]);
 
@@ -582,15 +760,9 @@
 
       render();
       map.fitBounds(allBounds, pad());
+      return matrixP.then(m => { M = m; initPlan(); });
     }).catch(() => toast("Could not load the site data."));
 
-    fetch("data/routes.json").then(r => r.json()).then(r => {
-      routes = r;
-      $("#usual-sub").textContent = `${hm(r.usual.total_minutes)} · ${r.usual.total_miles} mi`;
-      $("#best-sub").textContent = `${hm(r.best.total_minutes)} · ${r.best.total_miles} mi`;
-      $("#saving").innerHTML = `The best order saves about <b>${Math.round(r.saved_minutes)} min</b> and <b>${r.saved_miles} miles</b> per trip (${r.saved_percent}% less driving).`;
-      $("#saving").hidden = false;
-    }).catch(() => {});
 
     // ================= layer switches =================
     ["pickup", "dropoff"].forEach(type => $("#t-" + type).addEventListener("change", e => {

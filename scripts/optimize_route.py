@@ -5,10 +5,13 @@ Usual : "nearest-first" -> from Fremont go to the closest unvisited stop, repeat
 Best  : solved by Google OR-Tools (a "traveling salesman" problem).
 Both are judged by real driving time from OSRM, a free routing service built on OpenStreetMap.
 
+Usage:  python scripts/optimize_route.py                      all pickup sites (also saves routes.json)
+        python scripts/optimize_route.py --stops "Kim Grant Tennis,Mountain View Tennis,Furrtropolis"
+                                                              only the sites you name (any pickup or dropoff)
 Writes: docs/data/routes.json  (read by the map page)
         data/clean/osrm_cache.json (saved answers so we don't re-ask the server)
 """
-import json, os, requests
+import argparse, json, os, requests
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
 OSRM = "https://router.project-osrm.org"
@@ -71,27 +74,46 @@ def describe(order, places, seconds, meters):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--stops", help="comma-separated site names, in the order you plan to drive them")
+    args = ap.parse_args()
+
     data = json.load(open("data/clean/sites.json"))
     d = data["depot"]
-    places = [{"name": "Fremont (start/end)", "lat": d["lat"], "lon": d["lon"]}] + \
-             [{"name": s["name"], "lat": s["lat"], "lon": s["lon"]} for s in data["sites"] if s["type"] == "pickup"]
+    depot = {"name": "Fremont (start/end)", "lat": d["lat"], "lon": d["lon"]}
+    by_name = {s["name"]: s for s in data["sites"]}
+    if args.stops:
+        wanted = [n.strip() for n in args.stops.split(",") if n.strip()]
+        missing = [n for n in wanted if n not in by_name]
+        if missing:
+            raise SystemExit("Unknown site(s): " + ", ".join(missing))
+        sites = [by_name[n] for n in wanted]
+    else:
+        sites = [s for s in data["sites"] if s["type"] == "pickup"]
+    places = [depot] + [{"name": s["name"], "lat": s["lat"], "lon": s["lon"]} for s in sites]
 
     table = osrm(f"/table/v1/driving/{coords(places)}?annotations=duration,distance")
     seconds, meters = table["durations"], table["distances"]
 
     usual = describe(nearest_first(seconds), places, seconds, meters)
     best = describe(best_route(seconds), places, seconds, meters)
-    saved_min = usual["total_minutes"] - best["total_minutes"]
-    saved_mi = usual["total_miles"] - best["total_miles"]
+    results = [("USUAL (nearest-first)", usual), ("BEST (OR-Tools)", best)]
+    if args.stops:   # also show the order you typed
+        mine = describe(list(range(len(places))) + [0], places, seconds, meters)
+        results.insert(0, ("YOUR ORDER", mine))
+    saved_min = (mine if args.stops else usual)["total_minutes"] - best["total_minutes"]
+    saved_mi = (mine if args.stops else usual)["total_miles"] - best["total_miles"]
+    base = (mine if args.stops else usual)["total_minutes"]
     out = {"stops": len(places) - 1, "usual": usual, "best": best,
            "saved_minutes": round(saved_min, 1), "saved_miles": round(saved_mi, 1),
-           "saved_percent": round(100 * saved_min / usual["total_minutes"], 1)}
-    json.dump(out, open("docs/data/routes.json", "w"))
+           "saved_percent": round(100 * saved_min / base, 1) if base else 0}
+    if not args.stops:   # only the all-pickups comparison is saved for the web page
+        json.dump(out, open("docs/data/routes.json", "w"))
 
-    for label, r in (("USUAL (nearest-first)", usual), ("BEST (OR-Tools)", best)):
+    for label, r in results:
         print(f"\n{label}: {r['total_minutes']} min, {r['total_miles']} miles")
         for k, name in enumerate(r["order"]):
             print(f"  {k}. {name}" + (f"   (+{r['legs'][k]['minutes']} min)" if k < len(r["legs"]) else ""))
-    print(f"\nBest route saves {out['saved_minutes']} min and {out['saved_miles']} miles ({out['saved_percent']}% of drive time).")
+    print(f"\nBest route saves {out['saved_minutes']} min and {out['saved_miles']} miles ({out['saved_percent']}%).")
 
 main()

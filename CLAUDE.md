@@ -49,8 +49,9 @@ Preview locally with `python -m http.server` from inside `docs/` (opening index.
 ## Status
 - [x] Data cleaned and geocoded (`scripts/clean_data.py`)
 - [x] Map page (`docs/index.html`)
-- [x] Route optimizer (`scripts/optimize_route.py`) -> `docs/data/routes.json`, shown on the map
-- [ ] Not yet published: commit and push the optimizer + map update (only when the user asks)
+- [x] Route optimizer (`scripts/optimize_route.py`, `scripts/build_matrix.py`)
+- [x] Custom route planner on the map (Plan tab)
+- [ ] Not yet published: commit and push the planner (only when the user asks)
 
 ## Map requirements
 - Leaflet with OpenStreetMap tiles (include the required attribution).
@@ -60,16 +61,16 @@ Preview locally with `python -m http.server` from inside `docs/` (opening index.
 - Plain JavaScript, loading a JSON/GeoJSON file. No build step, so it works on GitHub Pages as-is.
 - Leaflet loaded from a CDN with a pinned version.
 
-## Route optimizer requirements
-- Python with `ortools` (install in a virtual environment; explain what that is).
-- Model as a routing problem (TSP / vehicle routing) over the pickup sites, starting and ending at a depot.
-- Use real driving distances/times (e.g., OSRM or similar) rather than straight-line if feasible;
-  explain the tradeoff. Cache results so we don't re-request.
-- Compare **current route vs. optimal route**: total distance/time and % saved.
-- Output route data the map can display (e.g., JSON) and a short plain-language summary.
-- **Depot**: Fremont, CA. Every trip starts and ends there. One driver, one vehicle, no capacity or time-window limits.
-- **"Current route"** = nearest-neighbor: go to the pickup site closest to Fremont, then repeatedly to the closest unvisited site, then return to Fremont. Implement this greedy baseline and compare it to the OR-Tools optimum.
-- Pickup sites only (dropoffs are not part of the route) unless the user says otherwise.
+## Route optimizer
+- `scripts/optimize_route.py`: Python + OR-Tools. Default compares nearest-first (the usual method) with the optimum for all pickup sites and writes `docs/data/routes.json`.
+  `--stops "Site A,Site B"` compares the user's own list (any pickup or dropoff sites) and prints the result.
+- `scripts/build_matrix.py`: measures real driving time/distance between every pair of places (Fremont + all sites) with OSRM and writes `docs/data/matrix.json`. Rerun when `sites.json` changes.
+- **Web route planner (Plan tab)**: the user clicks sites (popup "Add to route" or "+" in the Sites tab) to build their own route, because not every site says yes on the same day.
+  GitHub Pages can't run Python, so the page solves the route in JavaScript from `matrix.json`: Held-Karp (exact) up to 15 stops, 2-opt beyond that.
+  It compares **My order** (as clicked) vs **Nearest-first** vs **Best**, and draws real road shapes fetched from OSRM.
+  The JS result was checked against OR-Tools and matches.
+- Depot: Fremont, CA. One driver, one vehicle, no capacity or time-window limits.
+- "Current route" = nearest-neighbor: closest stop to Fremont first, then repeatedly the closest unvisited stop, then home.
 
 ## Working style
 - Work in small steps; show the user what you did and why after each.
