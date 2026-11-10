@@ -11,8 +11,6 @@ This project has two parts:
 The site will be hosted on **GitHub Pages** (static files only: HTML/CSS/JS/JSON, no server).
 
 ## About the user
-- A student, new to coding.
-- **Explain every choice simply**: what it is, why we chose it, and the plain-language alternative.
 - Prefer simple, readable code with comments over clever code.
 - **Ask before deleting or overwriting anything.** This includes files, folders, and
   anything in `data/raw/`. Never run destructive git commands without asking.
